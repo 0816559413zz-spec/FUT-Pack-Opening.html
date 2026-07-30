@@ -2179,6 +2179,8 @@ function bindUI(){
     e.target.closest('.modal').classList.remove('on');
   }));
   document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{
+    // หน้าต่างแก้ไขรายชื่อ: ห้ามปิดด้วยคลิกนอกฟอร์ม กันข้อมูลที่กำลังพิมพ์หายโดยไม่ตั้งใจ
+    if(m.id==='mRoster')return;
     if(e.target===m)m.classList.remove('on');
   }));
 
