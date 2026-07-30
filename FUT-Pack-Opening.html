@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ULTIMATE DRAW — สุ่มการ์ดตัวละคร</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;900&family=Teko:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#f4d03f;
+    --gold-dim:#a98a1e;
+    --bg0:#04060d;
+    --panel:rgba(10,14,26,.92);
+    --line:rgba(244,208,63,.28);
+    --txt:#eaf0ff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:var(--bg0);color:var(--txt);
+    font-family:'Noto Sans Thai','Segoe UI',Tahoma,sans-serif;}
+  canvas{display:block}
+  #app{position:fixed;inset:0}
+  #gl{position:absolute;inset:0;z-index:1}
+  #gl canvas{width:100%!important;height:100%!important}
+
+  /* ---------- vignette + scanlines ---------- */
+  #vignette{position:absolute;inset:0;z-index:2;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 45%,transparent 35%,rgba(0,0,0,.55) 78%,rgba(0,0,0,.9) 100%);}
+  #flashfx{position:absolute;inset:0;z-index:6;pointer-events:none;background:#fff;opacity:0;mix-blend-mode:screen}
+
+  /* ---------- HUD ---------- */
+  .hud{position:absolute;z-index:5}
+  #topbar,#bottom{pointer-events:none}
+  #topbar .btn,#topbar .brand,#actions,#actions .btn{pointer-events:auto}
+  #topbar{top:0;left:0;right:0;display:flex;align-items:center;gap:10px;padding:14px 18px;
+    background:linear-gradient(180deg,rgba(0,0,0,.75),transparent);}
+  .brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+  .brand .mark{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(145deg,#f9e79f,#c9a227 55%,#8a6a1e);color:#1a1405;font-weight:900;font-size:19px;
+    box-shadow:0 0 18px rgba(244,208,63,.45), inset 0 1px 0 rgba(255,255,255,.6);font-family:'Teko',sans-serif}
+  .brand b{font-family:'Teko',sans-serif;font-size:26px;letter-spacing:2px;line-height:1;
+    background:linear-gradient(180deg,#fff9e0,#f4d03f 60%,#b8891a);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand small{display:block;font-size:10px;letter-spacing:3px;color:#7f8aa3;margin-top:2px}
+
+  .btn{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--txt);
+    padding:9px 14px;border-radius:11px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
+    backdrop-filter:blur(8px);transition:.18s;display:inline-flex;align-items:center;gap:7px}
+  .btn:hover{background:rgba(244,208,63,.14);border-color:rgba(244,208,63,.6);transform:translateY(-1px)}
+  .btn:active{transform:translateY(0) scale(.97)}
+  .btn.gold{background:linear-gradient(160deg,#fdf1b8,#f4d03f 45%,#c9a227);color:#1c1503;border-color:#f7e08a;
+    box-shadow:0 8px 26px rgba(244,208,63,.35)}
+  .btn.gold:hover{filter:brightness(1.08)}
+  .btn.ghost{padding:9px 11px}
+  .btn.sm{padding:6px 10px;font-size:12px;border-radius:9px}
+  .btn.danger{border-color:rgba(255,90,90,.4);color:#ff9a9a}
+  .btn.danger:hover{background:rgba(255,60,60,.15);border-color:#ff6b6b}
+
+  /* ---------- bottom bar ---------- */
+  #bottom{bottom:0;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:14px;
+    padding:0 18px 26px;background:linear-gradient(0deg,rgba(0,0,0,.8),transparent)}
+  #hint{font-size:14px;letter-spacing:1px;color:#b9c4dc;text-shadow:0 2px 12px #000;
+    animation:pulse 1.9s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.45;transform:translateY(0)}50%{opacity:1;transform:translateY(-3px)}}
+  #actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  #actions.hide,#hint.hide{opacity:0;pointer-events:none;transform:translateY(14px)}
+  #actions,#hint{transition:.35s cubic-bezier(.2,.9,.25,1)}
+
+  /* ---------- rarity banner ---------- */
+  #banner{top:50%;left:0;right:0;transform:translateY(-50%);pointer-events:none;text-align:center;opacity:0}
+  #banner .rt{font-family:'Teko',sans-serif;font-size:clamp(46px,11vw,120px);letter-spacing:14px;line-height:.9;
+    text-transform:uppercase;color:#fff;text-shadow:0 0 30px currentColor,0 0 90px currentColor;opacity:.92}
+  #banner .sub{font-size:13px;letter-spacing:8px;color:#dfe7ff;margin-top:6px;opacity:.8}
+  #banner.play{animation:bannerIn 1.7s cubic-bezier(.15,.9,.2,1) forwards}
+  @keyframes bannerIn{
+    0%{opacity:0;transform:translateY(-50%) scale(.6)}
+    18%{opacity:1;transform:translateY(-50%) scale(1.04)}
+    30%{transform:translateY(-50%) scale(1)}
+    70%{opacity:.85}
+    100%{opacity:0;transform:translateY(-50%) scale(1.25)}
+  }
+
+  /* ---------- name plate ---------- */
+  #plate{bottom:132px;left:0;right:0;text-align:center;pointer-events:none;opacity:0;transition:.5s}
+  #plate.on{opacity:1}
+  #plate .nm{font-size:clamp(20px,4.4vw,34px);font-weight:900;letter-spacing:1px;
+    text-shadow:0 4px 26px #000,0 0 40px rgba(0,0,0,.9)}
+  #plate .meta{font-size:12px;letter-spacing:4px;color:#9fb0d0;margin-top:4px}
+
+  /* ---------- modal ---------- */
+  .modal{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
+    padding:20px;background:rgba(2,4,10,.72);backdrop-filter:blur(10px)}
+  .modal.on{display:flex;animation:fadeIn .25s ease}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .sheet{width:min(1040px,100%);max-height:88vh;display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden;
+    box-shadow:0 40px 120px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.04) inset}
+  .sheet header{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.08);
+    background:linear-gradient(180deg,rgba(244,208,63,.08),transparent)}
+  .sheet header h2{margin:0;font-size:17px;font-weight:900;letter-spacing:.5px;margin-right:auto}
+  .sheet .body{padding:18px 20px;overflow:auto}
+  .sheet footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .sheet footer .sp{margin-left:auto}
+
+  /* ---------- roster table ---------- */
+  table.roster{width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13px}
+  table.roster th{text-align:left;font-size:11px;letter-spacing:1px;color:#8a97b4;font-weight:700;padding:0 8px 4px}
+  table.roster td{padding:0}
+  table.roster tr.row td{background:rgba(255,255,255,.035);padding:6px 8px;border-top:1px solid rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.05)}
+  table.roster tr.row td:first-child{border-left:1px solid rgba(255,255,255,.05);border-radius:10px 0 0 10px}
+  table.roster tr.row td:last-child{border-right:1px solid rgba(255,255,255,.05);border-radius:0 10px 10px 0}
+  .inp{width:100%;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.1);border-radius:8px;
+    color:var(--txt);padding:7px 9px;font-family:inherit;font-size:13px;outline:none}
+  .inp:focus{border-color:rgba(244,208,63,.7);background:rgba(0,0,0,.55)}
+  select.inp{cursor:pointer}
+  select.inp option{background:#0b1020}
+  .rchip{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:900;letter-spacing:1px;white-space:nowrap}
+  textarea.inp{min-height:130px;resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.6}
+  .note{font-size:12px;color:#8a97b4;line-height:1.7}
+
+  /* ---------- collection grid ---------- */
+  #collGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:14px}
+  .cw{position:relative;cursor:pointer;transition:.2s}
+  .cw:hover{transform:translateY(-6px) scale(1.03)}
+  .cw img{width:100%;display:block;filter:drop-shadow(0 10px 22px rgba(0,0,0,.6))}
+  .cw .cnt{position:absolute;top:-6px;right:-6px;background:#f4d03f;color:#1c1503;font-size:11px;font-weight:900;
+    border-radius:20px;padding:2px 8px;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+  .empty{text-align:center;padding:44px 10px;color:#7c88a4;font-size:14px}
+
+  /* ---------- stats strip ---------- */
+  #odds{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  #odds .o{flex:1 1 90px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+    border-radius:12px;padding:9px 10px;text-align:center}
+  #odds .o b{display:block;font-family:'Teko',sans-serif;font-size:22px;line-height:1}
+  #odds .o span{font-size:10px;letter-spacing:1px;color:#8a97b4}
+
+  /* ---------- loader ---------- */
+  #loader{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:#04060d;transition:.6s}
+  #loader.off{opacity:0;pointer-events:none}
+  #loader .ring{width:54px;height:54px;border-radius:50%;border:3px solid rgba(244,208,63,.15);
+    border-top-color:var(--gold);animation:spin .9s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #loader p{margin-top:16px;font-size:12px;letter-spacing:5px;color:#6f7b96;text-align:center}
+
+  #err{position:absolute;z-index:60;inset:auto 16px 16px 16px;background:#2a0d0d;border:1px solid #ff6b6b;
+    color:#ffd6d6;padding:12px 14px;border-radius:12px;font-size:12px;display:none;white-space:pre-wrap}
+
+  @media(max-width:640px){
+    .brand small{display:none}
+    #topbar{padding:10px 12px;gap:6px}
+    .btn{padding:8px 10px;font-size:12px}
+    .lbl{display:none}
+    #plate{bottom:122px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="gl"></div>
+  <div id="vignette"></div>
+  <div id="flashfx"></div>
+
+  <div class="hud" id="topbar">
+    <div class="brand">
+      <div class="mark">U</div>
+      <div><b>ULTIMATE DRAW</b><small>PACK OPENING</small></div>
+    </div>
+    <button class="btn ghost" id="btnSound" title="เสียง">🔊<span class="lbl">เสียง</span></button>
+    <button class="btn" id="btnColl">🗂<span class="lbl">คลังการ์ด</span> <span id="collCount" style="opacity:.6">0</span></button>
+    <button class="btn" id="btnRoster">⚙<span class="lbl">แก้ไขรายชื่อ</span></button>
+  </div>
+
+  <div class="hud" id="banner"><div class="rt" id="bannerTxt">GOLD</div><div class="sub" id="bannerSub">RARE</div></div>
+
+  <div class="hud" id="plate"><div class="nm" id="plateName">—</div><div class="meta" id="plateMeta">—</div></div>
+
+  <div class="hud" id="bottom">
+    <div id="hint">แตะที่ซองเพื่อเปิด</div>
+    <div id="actions" class="hide">
+      <button class="btn gold" id="btnAgain">เปิดซองอีกครั้ง</button>
+      <button class="btn" id="btnX10">เปิดรวด 10 ใบ</button>
+    </div>
+  </div>
+
+  <!-- COLLECTION -->
+  <div class="modal" id="mColl">
+    <div class="sheet">
+      <header>
+        <h2>คลังการ์ด</h2>
+        <button class="btn sm danger" id="btnClearColl">ล้างคลัง</button>
+        <button class="btn sm" data-close>ปิด</button>
+      </header>
+      <div class="body">
+        <div id="collGrid"></div>
+        <div class="empty" id="collEmpty">ยังไม่มีการ์ด — เปิดซองเลย!</div>
+        <div id="odds"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROSTER -->
+  <div class="modal" id="mRoster">
+    <div class="sheet">
+      <header>
+        <h2>แก้ไขรายชื่อตัวละคร</h2>
+        <button class="btn sm" id="btnBulk">วาง/นำเข้าแบบข้อความ</button>
+        <button class="btn sm" data-close>ปิด</button>
+      </header>
+      <div class="body">
+        <div id="bulkWrap" style="display:none;margin-bottom:16px">
+          <p class="note">วางทีละบรรทัด รูปแบบ: <b>ชื่อ, เรตติ้ง, ตำแหน่ง, สังกัด, ธีม</b> (ใส่แค่ชื่อก็ได้ ระบบจะสุ่มค่าที่เหลือให้)<br>
+          ตัวอย่าง: <code>ซากุระ, 91, CAM, Konoha, Fire</code></p>
+          <textarea class="inp" id="bulkText" placeholder="ชื่อ, 88, ST, ทีม, ธีม"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <button class="btn sm gold" id="btnBulkApply">แทนที่ทั้งหมด</button>
+            <button class="btn sm" id="btnBulkAppend">เพิ่มต่อท้าย</button>
+            <button class="btn sm" id="btnBulkLoad">ดึงรายชื่อปัจจุบันมาแก้</button>
+          </div>
+        </div>
+        <table class="roster">
+          <thead><tr>
+            <th style="width:30%">ชื่อตัวละคร</th><th style="width:11%">เรตติ้ง</th><th style="width:13%">ตำแหน่ง</th>
+            <th style="width:18%">สังกัด</th><th style="width:16%">ธีม</th><th style="width:12%">ระดับ</th><th></th>
+          </tr></thead>
+          <tbody id="rosterBody"></tbody>
+        </table>
+      </div>
+      <footer>
+        <button class="btn sm" id="btnAddRow">+ เพิ่มตัวละคร</button>
+        <button class="btn sm" id="btnExport">ส่งออก JSON</button>
+        <button class="btn sm" id="btnImport">นำเข้า JSON</button>
+        <button class="btn sm danger" id="btnResetRoster">คืนค่าเริ่มต้น</button>
+        <span class="sp"></span>
+        <span class="note" id="rosterCount"></span>
+        <button class="btn sm gold" id="btnSaveRoster">บันทึก</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="loader"><div style="text-align:center"><div class="ring" style="margin:0 auto"></div><p>กำลังโหลด</p></div></div>
+  <div id="err"></div>
+</div>
+
+<input type="file" id="fileIn" accept="application/json" style="display:none">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =========================================================================
+   ULTIMATE DRAW — ระบบสุ่มการ์ดตัวละคร ธีมฟุตบอล (FUT style) 3D
+   ========================================================================= */
+window.addEventListener('error',e=>{
+  const el=document.getElementById('err');
+  el.style.display='block';el.textContent='เกิดข้อผิดพลาด: '+(e.message||e)+'\n'+(e.filename||'')+':'+(e.lineno||'');
+});
+
+/* ---------------------------------------------------------------- storage */
+const Store={
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return (this._m&&this._m[k])||d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){this._m=this._m||{};this._m[k]=v}},
+  _m:{}
+};
+
+/* ---------------------------------------------------------------- rarity  */
+const RARITY={
+  bronze:{key:'bronze',label:'BRONZE',th:'บรอนซ์',weight:36,glow:0xc98a54,
+    bg:['#7a4d23','#c98a54','#8a5a2b','#5c3618'],ink:'#2e1a09',accent:'#f0c9a0',line:'rgba(46,26,9,.35)'},
+  silver:{key:'silver',label:'SILVER',th:'ซิลเวอร์',weight:27,glow:0xdfe8f5,
+    bg:['#7d8798','#e8eef7','#9aa5b6','#69727f'],ink:'#222a36',accent:'#ffffff',line:'rgba(34,42,54,.32)'},
+  gold:{key:'gold',label:'GOLD',th:'โกลด์',weight:21,glow:0xffd766,
+    bg:['#9a7418','#f7e18b','#c9a227','#7a5a10'],ink:'#37280a',accent:'#fff6cf',line:'rgba(55,40,10,.35)'},
+  hero:{key:'hero',label:'HERO',th:'ฮีโร่',weight:11,glow:0xc65cff,
+    bg:['#2b0b52','#a24bff','#5c1ba0','#180432'],ink:'#ffeaff',accent:'#ffd166',line:'rgba(255,209,102,.4)'},
+  icon:{key:'icon',label:'ICON',th:'ไอคอน',weight:5,glow:0xfff0c0,
+    bg:['#b9a67a','#fffdf5','#e6d8b4','#8e7c53'],ink:'#3a2f14',accent:'#ffffff',line:'rgba(58,47,20,.35)'}
+};
+const RKEYS=['bronze','silver','gold','hero','icon'];
+function rarityOf(r){r=+r||0;return r>=92?'icon':r>=86?'hero':r>=78?'gold':r>=70?'silver':'bronze';}
+
+/* ---------------------------------------------------------------- roster  */
+const POSITIONS=['GK','CB','LB','RB','CDM','CM','CAM','LW','RW','ST'];
+const DEFAULT_ROSTER=[
+  {n:'อัศวินเพลิง',r:94,p:'ST',c:'Ember Order',t:'Fire'},
+  {n:'ราชันย์น้ำแข็ง',r:93,p:'CB',c:'Frost Realm',t:'Ice'},
+  {n:'เงาสายฟ้า',r:92,p:'RW',c:'Storm Clan',t:'Thunder'},
+  {n:'จอมเวทย์สายลม',r:90,p:'CAM',c:'Aether Guild',t:'Wind'},
+  {n:'นักล่าเงามืด',r:89,p:'LW',c:'Night Pact',t:'Shadow'},
+  {n:'ผู้พิทักษ์ศักดิ์สิทธิ์',r:88,p:'GK',c:'Dawn Temple',t:'Light'},
+  {n:'มังกรทมิฬ',r:87,p:'ST',c:'Wyrm Legion',t:'Dragon'},
+  {n:'ดาบเจ็ดดาว',r:86,p:'CM',c:'Star Blades',t:'Cosmos'},
+  {n:'พายุทราย',r:84,p:'CDM',c:'Dune Riders',t:'Earth'},
+  {n:'สายน้ำนิรันดร์',r:83,p:'CM',c:'Tide Court',t:'Water'},
+  {n:'เขี้ยวจันทรา',r:82,p:'LW',c:'Lunar Fang',t:'Beast'},
+  {n:'เกราะเหล็กกล้า',r:81,p:'CB',c:'Iron Wall',t:'Metal'},
+  {n:'ลูกศรพิษ',r:80,p:'RW',c:'Venom Hunt',t:'Poison'},
+  {n:'นักรบพเนจร',r:79,p:'ST',c:'Ronin Road',t:'Steel'},
+  {n:'ผู้เล่าเรื่องดาว',r:78,p:'CAM',c:'Star Blades',t:'Cosmos'},
+  {n:'กำแพงหิน',r:76,p:'CB',c:'Iron Wall',t:'Earth'},
+  {n:'ลมหมุน',r:75,p:'RB',c:'Aether Guild',t:'Wind'},
+  {n:'ประกายไฟ',r:74,p:'LB',c:'Ember Order',t:'Fire'},
+  {n:'หมอกขาว',r:73,p:'GK',c:'Frost Realm',t:'Ice'},
+  {n:'เท้าไว',r:72,p:'RW',c:'Dune Riders',t:'Wind'},
+  {n:'ผู้ฝึกหัด',r:70,p:'CM',c:'Dawn Temple',t:'Light'},
+  {n:'ทหารเลว',r:67,p:'CDM',c:'Ronin Road',t:'Steel'},
+  {n:'เด็กฝึกงาน',r:64,p:'LB',c:'Night Pact',t:'Shadow'},
+  {n:'ชาวบ้านกล้า',r:61,p:'ST',c:'Tide Court',t:'Water'}
+];
+let ROSTER=Store.get('ud_roster',null)||DEFAULT_ROSTER.slice();
+let COLLECTION=Store.get('ud_coll',[]);
+let SOUND_ON=Store.get('ud_sound',true);
+
+/* ---------------------------------------------------------------- utils   */
+function hash32(s){let h=2166136261>>>0;s=String(s);for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h>>>0;}
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const easeOutCubic=t=>1-Math.pow(1-t,3);
+const easeInOutCubic=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const easeOutBack=t=>1+2.2*Math.pow(t-1,3)+1.6*Math.pow(t-1,2);
+const easeOutElastic=t=>t===0?0:t===1?1:Math.pow(2,-10*t)*Math.sin((t*10-.75)*(2*Math.PI/3))+1;
+
+/* stats generated deterministically from name + rating + position */
+const POS_BIAS={
+  GK :{pac:-14,sho:-30,pas:-8,dri:-12,def:+8,phy:+4},
+  CB :{pac:-8,sho:-24,pas:-8,dri:-12,def:+12,phy:+10},
+  LB :{pac:+6,sho:-16,pas:0,dri:0,def:+6,phy:0},
+  RB :{pac:+6,sho:-16,pas:0,dri:0,def:+6,phy:0},
+  CDM:{pac:-4,sho:-8,pas:+2,dri:-2,def:+10,phy:+8},
+  CM :{pac:0,sho:-2,pas:+8,dri:+4,def:0,phy:0},
+  CAM:{pac:+2,sho:+4,pas:+10,dri:+10,def:-16,phy:-6},
+  LW :{pac:+10,sho:+2,pas:+2,dri:+10,def:-20,phy:-8},
+  RW :{pac:+10,sho:+2,pas:+2,dri:+10,def:-20,phy:-8},
+  ST :{pac:+6,sho:+12,pas:-4,dri:+4,def:-24,phy:+4}
+};
+function statsFor(ch){
+  const rnd=mulberry(hash32(ch.n+'|'+ch.p+'|'+ch.r));
+  const b=POS_BIAS[ch.p]||POS_BIAS.CM, base=+ch.r||70, out={};
+  ['pac','sho','pas','dri','def','phy'].forEach(k=>{
+    out[k]=clamp(Math.round(base+b[k]+(rnd()*14-7)),24,99);
+  });
+  if(ch.p==='GK'){out.pac=clamp(base-6,20,99);out.sho=clamp(base-4,20,99);out.pas=clamp(base-8,20,99);
+    out.dri=clamp(base-3,20,99);out.def=clamp(base-2,20,99);out.phy=clamp(base-5,20,99);}
+  return out;
+}
+const STAT_LABEL={pac:'PAC',sho:'SHO',pas:'PAS',dri:'DRI',def:'DEF',phy:'PHY'};
+const GK_LABEL={pac:'DIV',sho:'HAN',pas:'KIC',dri:'REF',def:'SPD',phy:'POS'};
+
+function normChar(o){
+  const rnd=mulberry(hash32(o.n||'x'));
+  return{
+    n:(o.n||'ไม่ระบุ').trim(),
+    r:clamp(Math.round(+o.r||(55+Math.floor(rnd()*40))),40,99),
+    p:POSITIONS.includes((o.p||'').toUpperCase())?(o.p).toUpperCase():POSITIONS[Math.floor(rnd()*POSITIONS.length)],
+    c:(o.c||'FREE AGENT').trim(),
+    t:(o.t||'NEUTRAL').trim()
+  };
+}
+/* =========================================================================
+   PART 2 — CANVAS ART : หน้าการ์ด / หลังการ์ด / ซองแพ็ค / เท็กซ์เจอร์เอฟเฟกต์
+   ========================================================================= */
+const CW=900, CH=1260;
+
+function newCanvas(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+function TK(size,weight){return (weight||600)+' '+size+'px Teko, "Noto Sans Thai", sans-serif';}
+function TH(size,weight){return (weight||700)+' '+size+'px "Noto Sans Thai", sans-serif';}
+
+/* ---- รูปทรงการ์ดแบบ FUT (มุมบนโค้ง ปลายล่างสอบ) ---- */
+function cardPath(ctx,w,h,inset){
+  const i=inset||0, W=w-i*2, H=h-i*2, x=i, y=i, r=W*0.075;
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+W-r,y);
+  ctx.quadraticCurveTo(x+W,y,x+W,y+r);
+  ctx.lineTo(x+W,y+H*0.60);
+  ctx.bezierCurveTo(x+W,y+H*0.80, x+W*0.86,y+H*0.90, x+W*0.5,y+H);
+  ctx.bezierCurveTo(x+W*0.14,y+H*0.90, x,y+H*0.80, x,y+H*0.60);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+/* ---- ตราสังกัด / ธงธีม สร้างจากชื่อ ---- */
+function drawCrest(ctx,cx,cy,size,seedStr,ink){
+  const rnd=mulberry(hash32(seedStr)), s=size;
+  const hue=Math.floor(rnd()*360), hue2=(hue+60+Math.floor(rnd()*120))%360;
+  ctx.save();ctx.translate(cx,cy);
+  ctx.beginPath();
+  ctx.moveTo(-s/2,-s/2);ctx.lineTo(s/2,-s/2);ctx.lineTo(s/2,s*0.12);
+  ctx.quadraticCurveTo(s/2,s*0.42,0,s/2);ctx.quadraticCurveTo(-s/2,s*0.42,-s/2,s*0.12);
+  ctx.closePath();
+  const g=ctx.createLinearGradient(-s/2,-s/2,s/2,s/2);
+  g.addColorStop(0,'hsl('+hue+',65%,52%)');g.addColorStop(1,'hsl('+hue2+',60%,32%)');
+  ctx.fillStyle=g;ctx.fill();
+  ctx.save();ctx.clip();
+  ctx.globalAlpha=.35;ctx.fillStyle='#fff';
+  const mode=Math.floor(rnd()*3);
+  if(mode===0){for(let i=-3;i<4;i+=2)ctx.fillRect(i*s*0.16,-s,s*0.16,s*2);}
+  else if(mode===1){ctx.beginPath();ctx.moveTo(-s,-s*0.1);ctx.lineTo(s,-s*0.45);ctx.lineTo(s,s*0.1);ctx.lineTo(-s,s*0.45);ctx.closePath();ctx.fill();}
+  else{ctx.beginPath();ctx.arc(0,-s*0.05,s*0.28,0,7);ctx.fill();}
+  ctx.restore();
+  ctx.lineWidth=Math.max(2,s*0.05);ctx.strokeStyle='rgba(255,255,255,.75)';ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font=TK(s*0.52,700);ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=s*0.18;
+  ctx.fillText(String(seedStr).replace(/[^A-Za-zก-๙]/g,'').slice(0,2).toUpperCase()||'★',0,-s*0.02);
+  ctx.restore();
+}
+function drawFlag(ctx,cx,cy,w,seedStr){
+  const rnd=mulberry(hash32('flag'+seedStr)), h=w*0.66;
+  const hues=[Math.floor(rnd()*360),Math.floor(rnd()*360),Math.floor(rnd()*360)];
+  ctx.save();ctx.translate(cx-w/2,cy-h/2);
+  const vert=rnd()>.5;
+  for(let i=0;i<3;i++){
+    ctx.fillStyle='hsl('+hues[i]+',62%,'+(38+i*10)+'%)';
+    if(vert)ctx.fillRect(i*w/3,0,w/3+1,h); else ctx.fillRect(0,i*h/3,w,h/3+1);
+  }
+  ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=Math.max(1.5,w*0.028);ctx.strokeRect(0,0,w,h);
+  ctx.restore();
+}
+
+/* ---- ภาพตัวละคร (ซิลูเอตต์ + อักษรย่อ) ---- */
+function drawPortrait(ctx,x,y,w,h,ch,R){
+  const rnd=mulberry(hash32('p'+ch.n));
+  const hue=Math.floor(rnd()*360);
+  ctx.save();
+  ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+
+  // แสงเรืองด้านหลัง
+  const glow=ctx.createRadialGradient(x+w/2,y+h*0.55,10,x+w/2,y+h*0.55,w*0.72);
+  glow.addColorStop(0,'hsla('+hue+',85%,68%,.55)');
+  glow.addColorStop(.55,'hsla('+((hue+40)%360)+',80%,45%,.22)');
+  glow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=glow;ctx.fillRect(x,y,w,h);
+
+  // รังสี
+  ctx.save();ctx.translate(x+w/2,y+h*0.58);ctx.globalAlpha=.16;
+  for(let i=0;i<18;i++){ctx.rotate(Math.PI*2/18);ctx.fillStyle=R.accent;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(w*0.9,-w*0.028);ctx.lineTo(w*0.9,w*0.028);ctx.closePath();ctx.fill();}
+  ctx.restore();
+
+  // ซิลูเอตต์
+  const cx=x+w/2, base=y+h*0.99, sh=h*0.78;
+  const bodyG=ctx.createLinearGradient(cx,base-sh,cx,base);
+  bodyG.addColorStop(0,'rgba(12,16,28,.96)');bodyG.addColorStop(1,'rgba(4,6,12,.6)');
+  ctx.fillStyle=bodyG;
+  ctx.beginPath();
+  ctx.arc(cx,base-sh*0.80,sh*0.185,0,Math.PI*2);ctx.fill();          // หัว
+  ctx.beginPath();
+  ctx.moveTo(cx-sh*0.16,base-sh*0.63);
+  ctx.quadraticCurveTo(cx-sh*0.52,base-sh*0.52,cx-sh*0.60,base-sh*0.06);
+  ctx.lineTo(cx-sh*0.62,base);ctx.lineTo(cx+sh*0.62,base);
+  ctx.lineTo(cx+sh*0.60,base-sh*0.06);
+  ctx.quadraticCurveTo(cx+sh*0.52,base-sh*0.52,cx+sh*0.16,base-sh*0.63);
+  ctx.closePath();ctx.fill();
+  // ขอบเรืองแสง
+  ctx.strokeStyle='hsla('+hue+',90%,72%,.75)';ctx.lineWidth=w*0.012;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,base-sh*0.80,sh*0.185,0,Math.PI*2);ctx.stroke();
+
+  // อักษรย่อ
+  const initials=(ch.n||'?').replace(/\s+/g,'').slice(0,2);
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font=TH(w*0.30,900);
+  ctx.fillStyle='rgba(255,255,255,.95)';
+  ctx.shadowColor='hsla('+hue+',95%,60%,.95)';ctx.shadowBlur=w*0.14;
+  ctx.fillText(initials,cx,y+h*0.60);
+  ctx.restore();
+}
+
+/* ---- หน้าการ์ด ---- */
+function renderCardFront(ch,scale){
+  scale=scale||1;
+  const w=Math.round(CW*scale), h=Math.round(CH*scale);
+  const cv=newCanvas(w,h), ctx=cv.getContext('2d');
+  ctx.scale(scale,scale);
+  const R=RARITY[rarityOf(ch.r)], st=statsFor(ch), isGK=ch.p==='GK';
+  const L=isGK?GK_LABEL:STAT_LABEL;
+
+  /* พื้นการ์ด */
+  ctx.save();
+  cardPath(ctx,CW,CH,0);
+  ctx.save();ctx.clip();
+
+  const g=ctx.createLinearGradient(0,0,CW,CH);
+  g.addColorStop(0,R.bg[0]);g.addColorStop(.34,R.bg[1]);g.addColorStop(.62,R.bg[2]);g.addColorStop(1,R.bg[3]);
+  ctx.fillStyle=g;ctx.fillRect(0,0,CW,CH);
+
+  // ลายพื้นหลังทแยง
+  ctx.globalAlpha=.09;ctx.fillStyle=R.ink;
+  for(let i=-CH;i<CW+CH;i+=46){ctx.save();ctx.translate(i,0);ctx.rotate(-0.32);ctx.fillRect(0,-200,16,CH+500);ctx.restore();}
+  ctx.globalAlpha=1;
+
+  // แสงบนสุด
+  const top=ctx.createLinearGradient(0,0,0,CH*0.42);
+  top.addColorStop(0,'rgba(255,255,255,.42)');top.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=top;ctx.fillRect(0,0,CW,CH*0.42);
+  // เงาล่าง
+  const bot=ctx.createLinearGradient(0,CH*0.6,0,CH);
+  bot.addColorStop(0,'rgba(0,0,0,0)');bot.addColorStop(1,'rgba(0,0,0,.4)');
+  ctx.fillStyle=bot;ctx.fillRect(0,CH*0.6,CW,CH*0.4);
+
+  // แถบเฉียงเงาวาว
+  ctx.save();ctx.globalCompositeOperation='overlay';ctx.globalAlpha=.55;
+  const sh=ctx.createLinearGradient(-200,CH,CW+200,-200);
+  sh.addColorStop(.36,'rgba(255,255,255,0)');sh.addColorStop(.48,'rgba(255,255,255,.85)');
+  sh.addColorStop(.60,'rgba(255,255,255,0)');
+  ctx.fillStyle=sh;ctx.fillRect(0,0,CW,CH);ctx.restore();
+
+  /* ภาพตัวละคร */
+  drawPortrait(ctx,CW*0.30,CH*0.045,CW*0.66,CH*0.515,ch,R);
+
+  /* บล็อกซ้าย : เรตติ้ง / ตำแหน่ง / ธง / ตรา */
+  ctx.textAlign='center';
+  ctx.fillStyle=R.ink;
+  ctx.font=TK(196,700);ctx.textBaseline='alphabetic';
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.28)';ctx.shadowBlur=14;ctx.shadowOffsetY=5;
+  ctx.fillText(String(ch.r),CW*0.176,CH*0.183);ctx.restore();
+  ctx.font=TK(78,600);
+  ctx.fillText(ch.p,CW*0.176,CH*0.245);
+
+  ctx.strokeStyle=R.line;ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(CW*0.085,CH*0.268);ctx.lineTo(CW*0.268,CH*0.268);ctx.stroke();
+
+  drawFlag(ctx,CW*0.176,CH*0.318,CW*0.135,ch.t);
+  drawCrest(ctx,CW*0.176,CH*0.412,CW*0.145,ch.c,R.ink);
+
+  /* เส้นคั่น + ชื่อ */
+  const nameY=CH*0.616;
+  ctx.strokeStyle=R.line;ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(CW*0.13,CH*0.572);ctx.lineTo(CW*0.87,CH*0.572);ctx.stroke();
+
+  ctx.fillStyle=R.ink;ctx.textAlign='center';ctx.textBaseline='middle';
+  let fs=72, nm=ch.n;
+  ctx.font=TH(fs,900);
+  while(ctx.measureText(nm).width>CW*0.74&&fs>22){fs-=2;ctx.font=TH(fs,900);}
+  ctx.fillText(nm,CW*0.5,nameY);
+
+  ctx.strokeStyle=R.line;ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(CW*0.13,CH*0.660);ctx.lineTo(CW*0.87,CH*0.660);ctx.stroke();
+
+  /* สถิติ 2 คอลัมน์ */
+  const keys=['pac','sho','pas','dri','def','phy'];
+  const colX=[CW*0.30,CW*0.66], rowY=[CH*0.712,CH*0.778,CH*0.844];
+  ctx.textBaseline='middle';
+  for(let i=0;i<6;i++){
+    const x=colX[i%2], y=rowY[Math.floor(i/2)], k=keys[i];
+    ctx.textAlign='right';ctx.font=TK(66,700);ctx.fillStyle=R.ink;
+    ctx.fillText(String(st[k]),x+CW*0.012,y);
+    ctx.textAlign='left';ctx.font=TK(50,500);ctx.globalAlpha=.86;
+    ctx.fillText(L[k],x+CW*0.032,y+1);ctx.globalAlpha=1;
+  }
+  // เส้นแบ่งกลางคอลัมน์
+  ctx.strokeStyle=R.line;ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(CW*0.5,CH*0.684);ctx.lineTo(CW*0.5,CH*0.872);ctx.stroke();
+
+  /* ป้ายสังกัด/ธีมล่างสุด */
+  ctx.textAlign='center';ctx.globalAlpha=.7;ctx.fillStyle=R.ink;
+  let bs=32, bt=(ch.c+'  •  '+ch.t).toUpperCase();
+  ctx.font=TK(bs,500);
+  while(ctx.measureText(bt).width>CW*0.36&&bs>14){bs-=2;ctx.font=TK(bs,500);}
+  ctx.fillText(bt,CW*0.5,CH*0.910);
+  ctx.globalAlpha=1;
+
+  /* ตราระดับหายากมุมขวาบน */
+  if(R.key==='icon'||R.key==='hero'){
+    ctx.save();ctx.translate(CW*0.795,CH*0.078);
+    ctx.font=TK(44,700);ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(0,0,0,.75)';ctx.shadowBlur=18;
+    ctx.fillStyle=R.key==='icon'?'#6b5518':R.accent;
+    ctx.fillText(R.label,0,0);
+    ctx.restore();
+  }
+  ctx.restore(); // clip
+
+  /* ขอบการ์ด */
+  cardPath(ctx,CW,CH,0);
+  ctx.lineWidth=10;
+  const eg=ctx.createLinearGradient(0,0,CW,CH);
+  eg.addColorStop(0,'rgba(255,255,255,.85)');eg.addColorStop(.5,R.accent);eg.addColorStop(1,'rgba(255,255,255,.35)');
+  ctx.strokeStyle=eg;ctx.globalAlpha=.55;ctx.stroke();ctx.globalAlpha=1;
+  ctx.restore();
+  return cv;
+}
+
+/* ---- หลังการ์ด ---- */
+let _backCache=null;
+function renderCardBack(){
+  if(_backCache)return _backCache;
+  const cv=newCanvas(CW,CH), ctx=cv.getContext('2d');
+  cardPath(ctx,CW,CH,0);ctx.save();ctx.clip();
+  const g=ctx.createLinearGradient(0,0,CW,CH);
+  g.addColorStop(0,'#0a1024');g.addColorStop(.5,'#131c3a');g.addColorStop(1,'#060a16');
+  ctx.fillStyle=g;ctx.fillRect(0,0,CW,CH);
+  ctx.globalAlpha=.10;ctx.strokeStyle='#f4d03f';ctx.lineWidth=3;
+  for(let i=-CH;i<CW+CH;i+=60){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i-CH,CH);ctx.stroke();}
+  ctx.globalAlpha=1;
+  const rg=ctx.createRadialGradient(CW/2,CH*0.45,20,CW/2,CH*0.45,CW*0.8);
+  rg.addColorStop(0,'rgba(244,208,63,.35)');rg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=rg;ctx.fillRect(0,0,CW,CH);
+  ctx.save();ctx.translate(CW/2,CH*0.45);
+  ctx.beginPath();ctx.arc(0,0,CW*0.24,0,7);
+  const bg=ctx.createLinearGradient(-200,-200,200,200);
+  bg.addColorStop(0,'#fdf1b8');bg.addColorStop(.55,'#c9a227');bg.addColorStop(1,'#7a5a10');
+  ctx.fillStyle=bg;ctx.fill();
+  ctx.lineWidth=12;ctx.strokeStyle='rgba(255,255,255,.5)';ctx.stroke();
+  ctx.fillStyle='#1a1405';ctx.font=TK(210,700);ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('U',0,10);
+  ctx.restore();
+  ctx.fillStyle='rgba(244,208,63,.85)';ctx.textAlign='center';ctx.font=TK(64,600);
+  ctx.fillText('ULTIMATE DRAW',CW/2,CH*0.75);
+  ctx.font=TK(36,500);ctx.globalAlpha=.5;ctx.fillText('PACK OPENING',CW/2,CH*0.79);
+  ctx.restore();
+  cardPath(ctx,CW,CH,0);ctx.lineWidth=10;ctx.strokeStyle='rgba(244,208,63,.5)';ctx.stroke();
+  _backCache=cv;return cv;
+}
+
+/* ---- อาร์ตซองแพ็ค ---- */
+function renderPackArt(){
+  const W=760,H=1080,cv=newCanvas(W,H),ctx=cv.getContext('2d');
+  const g=ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,'#0b1330');g.addColorStop(.45,'#16224e');g.addColorStop(1,'#05080f');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  // รังสีจากกลาง
+  ctx.save();ctx.translate(W/2,H*0.42);ctx.globalAlpha=.14;
+  for(let i=0;i<24;i++){ctx.rotate(Math.PI*2/24);ctx.fillStyle=i%2?'#f4d03f':'#7fd4ff';
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(W,-26);ctx.lineTo(W,26);ctx.closePath();ctx.fill();}
+  ctx.restore();
+  const rg=ctx.createRadialGradient(W/2,H*0.42,10,W/2,H*0.42,W*0.75);
+  rg.addColorStop(0,'rgba(255,236,170,.55)');rg.addColorStop(.5,'rgba(120,90,255,.18)');rg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=rg;ctx.fillRect(0,0,W,H);
+  // ตราทอง
+  ctx.save();ctx.translate(W/2,H*0.42);
+  ctx.beginPath();
+  for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/2,r=W*0.26;
+    const x=Math.cos(a)*r,y=Math.sin(a)*r;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+  ctx.closePath();
+  const bg=ctx.createLinearGradient(-200,-200,200,200);
+  bg.addColorStop(0,'#fff6cf');bg.addColorStop(.5,'#f4d03f');bg.addColorStop(1,'#8a6a1e');
+  ctx.fillStyle=bg;ctx.fill();
+  ctx.lineWidth=10;ctx.strokeStyle='rgba(255,255,255,.65)';ctx.stroke();
+  ctx.fillStyle='#1a1405';ctx.font=TK(180,700);ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('U',0,8);ctx.restore();
+  // ข้อความ
+  ctx.textAlign='center';
+  ctx.fillStyle='#ffe9a8';ctx.shadowColor='rgba(244,208,63,.7)';ctx.shadowBlur=28;
+  let ps=84;ctx.font=TK(ps,600);
+  while(ctx.measureText('PREMIUM PACK').width>W*0.82&&ps>30){ps-=3;ctx.font=TK(ps,600);}
+  ctx.fillText('PREMIUM PACK',W/2,H*0.74);
+  ctx.shadowBlur=0;ctx.fillStyle='rgba(220,232,255,.75)';ctx.font=TH(30,700);
+  ctx.fillText('รับประกันการ์ดหายาก 1 ใบ',W/2,H*0.79);
+  ctx.strokeStyle='rgba(244,208,63,.5)';ctx.lineWidth=6;
+  ctx.strokeRect(28,28,W-56,H-56);
+  ctx.strokeStyle='rgba(255,255,255,.14)';ctx.lineWidth=2;
+  ctx.strokeRect(46,46,W-92,H-92);
+  return cv;
+}
+function renderPackSide(){
+  const W=128,H=1024,cv=newCanvas(W,H),ctx=cv.getContext('2d');
+  const g=ctx.createLinearGradient(0,0,W,0);
+  g.addColorStop(0,'#5c4712');g.addColorStop(.4,'#f4d03f');g.addColorStop(.6,'#c9a227');g.addColorStop(1,'#3c2f0b');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(0,0,0,.22)';
+  for(let y=0;y<H;y+=34)ctx.fillRect(0,y,W,8);
+  return cv;
+}
+
+/* ---- สไปรท์อนุภาค / รังสี ---- */
+function sparkTexture(){
+  const s=128,cv=newCanvas(s,s),ctx=cv.getContext('2d');
+  const g=ctx.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
+  g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.25,'rgba(255,255,255,.75)');
+  g.addColorStop(.55,'rgba(255,255,255,.16)');g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g;ctx.fillRect(0,0,s,s);
+  return cv;
+}
+function sunburstTexture(){
+  const s=1024,cv=newCanvas(s,s),ctx=cv.getContext('2d');
+  ctx.translate(s/2,s/2);
+  for(let i=0;i<44;i++){
+    ctx.rotate(Math.PI*2/44);
+    ctx.globalAlpha=i%2?0.30:0.12;
+    ctx.fillStyle='#ffffff';
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(s*0.7,-s*0.012);ctx.lineTo(s*0.7,s*0.012);ctx.closePath();ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  const g=ctx.createRadialGradient(0,0,0,0,0,s/2);
+  g.addColorStop(0,'rgba(255,255,255,.9)');g.addColorStop(.25,'rgba(255,255,255,.25)');g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.globalCompositeOperation='destination-in';
+  ctx.fillStyle=g;ctx.fillRect(-s/2,-s/2,s,s);
+  return cv;
+}
+/* =========================================================================
+   PART 3 — ฉาก 3D (Three.js) + Bloom post-processing เขียนเอง
+   ========================================================================= */
+let renderer,scene,camera,W2=1,H2=1,DPR=1;
+let bgMesh,raysMesh,dust,beam,groundGlow;
+let packGroup,packMesh,packGlow,packSparks;
+let cardGroup,cardFront,cardBack,cardHolo,cardGlow;
+let particles,pAttr,pVel,pLife,pMax,pType,P_COUNT=900;
+let sparkTex,sunTex,backTex,packArtTex,packSideTex;
+let rtScene,rtBright,rtA,rtB,quadScene,quadCam,quadMesh,matBright,matBlur,matComp;
+const mouse={x:0,y:0,tx:0,ty:0};
+
+function makeRT(w,h,type){
+  return new THREE.WebGLRenderTarget(Math.max(2,w|0),Math.max(2,h|0),{
+    minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,
+    format:THREE.RGBAFormat,type:type,stencilBuffer:false,depthBuffer:true
+  });
+}
+
+function initThree(){
+  const host=document.getElementById('gl');
+  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  renderer.setPixelRatio(DPR);
+  renderer.setClearColor(0x03050c,1);
+  renderer.toneMapping=THREE.NoToneMapping;
+  renderer.outputEncoding=THREE.LinearEncoding;
+  host.appendChild(renderer.domElement);
+
+  shakeVec=new THREE.Vector3();
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(42,1,0.1,200);
+  camera.position.set(0,0,6.6);
+
+  /* ---------- เท็กซ์เจอร์ ---------- */
+  const T=c=>{const t=new THREE.CanvasTexture(c);t.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    t.encoding=THREE.sRGBEncoding;t.needsUpdate=true;return t;};
+  sparkTex=T(sparkTexture()); sunTex=T(sunburstTexture());
+  backTex=T(renderCardBack()); packArtTex=T(renderPackArt()); packSideTex=T(renderPackSide());
+
+  /* ---------- พื้นหลัง ---------- */
+  bgMesh=new THREE.Mesh(new THREE.SphereGeometry(70,32,24),new THREE.ShaderMaterial({
+    side:THREE.BackSide,depthWrite:false,
+    uniforms:{uTint:{value:new THREE.Color(0x3a2a72)},uTime:{value:0}},
+    vertexShader:`varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+    fragmentShader:`
+      varying vec3 vP;uniform vec3 uTint;uniform float uTime;
+      float hash(vec2 p){return fract(sin(dot(p,vec2(41.3,289.1)))*43758.5453);}
+      void main(){
+        vec3 d=normalize(vP);
+        float v=clamp(d.y*0.5+0.5,0.0,1.0);
+        vec3 top=vec3(0.012,0.018,0.045);
+        vec3 mid=uTint*0.16;
+        vec3 bot=vec3(0.004,0.005,0.012);
+        vec3 c=mix(bot,mid,smoothstep(0.0,0.55,v));
+        c=mix(c,top,smoothstep(0.55,1.0,v));
+        float star=step(0.9985,hash(floor(d.xy*420.0)));
+        c+=star*0.8*smoothstep(0.2,1.0,v);
+        gl_FragColor=vec4(c,1.0);
+      }`
+  }));
+  scene.add(bgMesh);
+
+  /* ---------- รังสีหลังการ์ด ---------- */
+  raysMesh=new THREE.Mesh(new THREE.PlaneGeometry(15,15),new THREE.MeshBasicMaterial({
+    map:sunTex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0,
+    color:new THREE.Color(0xffd766)}));
+  raysMesh.position.z=-2.2;scene.add(raysMesh);
+
+  /* ---------- ลำแสง ---------- */
+  beam=new THREE.Mesh(new THREE.CylinderGeometry(1.55,2.9,18,64,1,true),new THREE.ShaderMaterial({
+    transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,
+    uniforms:{uTime:{value:0},uColor:{value:new THREE.Color(0xffd766)},uOpacity:{value:0}},
+    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+    fragmentShader:`
+      varying vec2 vUv;uniform float uTime,uOpacity;uniform vec3 uColor;
+      void main(){
+        float v=smoothstep(0.0,0.35,vUv.y)*smoothstep(1.0,0.55,vUv.y);
+        float stripes=0.55+0.45*sin(vUv.x*44.0+uTime*2.2);
+        float edge=smoothstep(0.0,0.12,vUv.x)*smoothstep(1.0,0.88,vUv.x);
+        float a=v*stripes*(0.35+0.65*edge)*uOpacity;
+        gl_FragColor=vec4(uColor*a*1.6,a);
+      }`
+  }));
+  beam.position.y=-1.2;beam.position.z=-1.4;scene.add(beam);
+
+  /* ---------- แสงพื้น ---------- */
+  groundGlow=new THREE.Mesh(new THREE.PlaneGeometry(16,16),new THREE.MeshBasicMaterial({
+    map:sparkTex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:.28,
+    color:new THREE.Color(0x4a7bff)}));
+  groundGlow.rotation.x=-Math.PI/2;groundGlow.position.set(0,-3.3,-0.5);scene.add(groundGlow);
+
+  /* ---------- ฝุ่นลอย ---------- */
+  {
+    const N=420,pos=new Float32Array(N*3),siz=new Float32Array(N);
+    for(let i=0;i<N;i++){
+      pos[i*3]=(Math.random()-.5)*22;pos[i*3+1]=(Math.random()-.5)*14;pos[i*3+2]=(Math.random()-.5)*12-2;
+      siz[i]=Math.random()*10+3;
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    g.setAttribute('aSize',new THREE.BufferAttribute(siz,1));
+    dust=new THREE.Points(g,new THREE.ShaderMaterial({
+      transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,
+      uniforms:{uTex:{value:sparkTex},uTime:{value:0},uColor:{value:new THREE.Color(0x9fc0ff)},uOp:{value:.5}},
+      vertexShader:`attribute float aSize;varying float vF;uniform float uTime;
+        void main(){vec3 p=position;
+          p.y+=sin(uTime*0.28+p.x*0.6)*0.5;p.x+=cos(uTime*0.21+p.y*0.5)*0.4;
+          vec4 mv=modelViewMatrix*vec4(p,1.0);
+          vF=0.35+0.65*(0.5+0.5*sin(uTime*1.4+p.z*3.0));
+          gl_PointSize=aSize*(200.0/-mv.z);gl_Position=projectionMatrix*mv;}`,
+      fragmentShader:`uniform sampler2D uTex;uniform vec3 uColor;uniform float uOp;varying float vF;
+        void main(){vec4 t=texture2D(uTex,gl_PointCoord);gl_FragColor=vec4(uColor*t.a*vF*uOp*1.4,t.a*vF*uOp);}`
+    }));
+    scene.add(dust);
+  }
+
+  /* ---------- ซองแพ็ค ---------- */
+  packGroup=new THREE.Group();scene.add(packGroup);
+  {
+    const matSide=new THREE.MeshStandardMaterial({map:packSideTex,roughness:.32,metalness:.85,
+      emissive:new THREE.Color(0x2a2005),emissiveIntensity:.35});
+    const matFace=new THREE.MeshStandardMaterial({map:packArtTex,roughness:.42,metalness:.55,
+      emissive:new THREE.Color(0xffffff),emissiveMap:packArtTex,emissiveIntensity:.55});
+    const matBack=new THREE.MeshStandardMaterial({map:packArtTex,roughness:.5,metalness:.5,
+      emissive:new THREE.Color(0x111a33),emissiveIntensity:.3});
+    packMesh=new THREE.Mesh(new THREE.BoxGeometry(2.05,2.95,0.24,1,1,1),
+      [matSide,matSide,matSide,matSide,matFace,matBack]);
+    packGroup.add(packMesh);
+
+    packGlow=new THREE.Mesh(new THREE.PlaneGeometry(8,8),new THREE.MeshBasicMaterial({
+      map:sparkTex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:.5,
+      color:new THREE.Color(0xffd766)}));
+    packGlow.position.z=-.6;packGroup.add(packGlow);
+
+    const N=120,pos=new Float32Array(N*3),siz=new Float32Array(N);
+    for(let i=0;i<N;i++){
+      const a=Math.random()*Math.PI*2,r=1.6+Math.random()*1.6;
+      pos[i*3]=Math.cos(a)*r;pos[i*3+1]=(Math.random()-.5)*4.2;pos[i*3+2]=Math.sin(a)*r;
+      siz[i]=Math.random()*14+5;
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    g.setAttribute('aSize',new THREE.BufferAttribute(siz,1));
+    packSparks=new THREE.Points(g,new THREE.ShaderMaterial({
+      transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,
+      uniforms:{uTex:{value:sparkTex},uTime:{value:0},uColor:{value:new THREE.Color(0xffe08a)},uOp:{value:.85}},
+      vertexShader:`attribute float aSize;varying float vF;uniform float uTime;
+        void main(){float a=uTime*0.55;
+          vec3 p=vec3(position.x*cos(a)-position.z*sin(a),position.y+sin(uTime*1.1+position.x)*0.25,position.x*sin(a)+position.z*cos(a));
+          vec4 mv=modelViewMatrix*vec4(p,1.0);
+          vF=0.4+0.6*(0.5+0.5*sin(uTime*3.0+position.y*2.0));
+          gl_PointSize=aSize*(220.0/-mv.z);gl_Position=projectionMatrix*mv;}`,
+      fragmentShader:`uniform sampler2D uTex;uniform vec3 uColor;uniform float uOp;varying float vF;
+        void main(){vec4 t=texture2D(uTex,gl_PointCoord);float a=t.a*vF*uOp;gl_FragColor=vec4(uColor*a*1.8,a);}`
+    }));
+    packGroup.add(packSparks);
+  }
+
+  /* ---------- แสงในฉาก ---------- */
+  scene.add(new THREE.AmbientLight(0x8899cc,.55));
+  const k=new THREE.PointLight(0xfff0c0,1.5,40);k.position.set(3.2,3.6,5);scene.add(k);
+  const f=new THREE.PointLight(0x6699ff,1.1,40);f.position.set(-4,-2,4);scene.add(f);
+  const r=new THREE.PointLight(0xff9a4a,.9,40);r.position.set(0,2,-6);scene.add(r);
+
+  /* ---------- การ์ด ---------- */
+  cardGroup=new THREE.Group();cardGroup.visible=false;scene.add(cardGroup);
+  {
+    const CWU=2.55,CHU=CWU*(CH/CW);
+    const geo=new THREE.PlaneGeometry(CWU,CHU,1,1);
+    cardFront=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({
+      map:backTex,transparent:true,alphaTest:.02,side:THREE.FrontSide,toneMapped:false}));
+    cardGroup.add(cardFront);
+
+    cardBack=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({
+      map:backTex,transparent:true,alphaTest:.02,side:THREE.FrontSide,toneMapped:false}));
+    cardBack.rotation.y=Math.PI;cardBack.position.z=-0.012;cardGroup.add(cardBack);
+
+    cardHolo=new THREE.Mesh(geo,new THREE.ShaderMaterial({
+      transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.FrontSide,
+      uniforms:{tCard:{value:backTex},uTime:{value:0},uAmt:{value:0},uTilt:{value:new THREE.Vector2(0,0)}},
+      vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+      fragmentShader:`
+        varying vec2 vUv;uniform sampler2D tCard;uniform float uTime,uAmt;uniform vec2 uTilt;
+        vec3 rainbow(float t){return 0.5+0.5*cos(6.28318*(vec3(0.0,0.33,0.67)+t));}
+        void main(){
+          float a=texture2D(tCard,vUv).a;
+          if(a<0.02)discard;
+          float d=(vUv.x*1.1+vUv.y*0.75)+uTilt.x*0.8-uTilt.y*0.6;
+          float band=sin(d*9.0-uTime*1.1);
+          float shine=smoothstep(0.55,1.0,band);
+          vec3 col=rainbow(d*0.8+uTime*0.06);
+          float sweep=smoothstep(0.35,0.0,abs(fract(d*0.5-uTime*0.13)-0.5));
+          float amt=uAmt*a;
+          gl_FragColor=vec4(col*(shine*0.5+sweep*0.9)*amt, (shine*0.28+sweep*0.5)*amt);
+        }`
+    }));
+    cardHolo.position.z=0.014;cardGroup.add(cardHolo);
+
+    cardGlow=new THREE.Mesh(new THREE.PlaneGeometry(9,9),new THREE.MeshBasicMaterial({
+      map:sparkTex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0,
+      color:new THREE.Color(0xffd766)}));
+    cardGlow.position.z=-.35;cardGroup.add(cardGlow);
+  }
+
+  /* ---------- อนุภาคระเบิด ---------- */
+  {
+    const pos=new Float32Array(P_COUNT*3),siz=new Float32Array(P_COUNT),alp=new Float32Array(P_COUNT),col=new Float32Array(P_COUNT*3);
+    pVel=new Float32Array(P_COUNT*3);pLife=new Float32Array(P_COUNT);pMax=new Float32Array(P_COUNT);pType=new Uint8Array(P_COUNT);
+    for(let i=0;i<P_COUNT;i++){pos[i*3+1]=999;alp[i]=0;siz[i]=10;}
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    g.setAttribute('aSize',new THREE.BufferAttribute(siz,1));
+    g.setAttribute('aAlpha',new THREE.BufferAttribute(alp,1));
+    g.setAttribute('aColor',new THREE.BufferAttribute(col,3));
+    particles=new THREE.Points(g,new THREE.ShaderMaterial({
+      transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,
+      uniforms:{uTex:{value:sparkTex}},
+      vertexShader:`attribute float aSize;attribute float aAlpha;attribute vec3 aColor;
+        varying float vA;varying vec3 vC;
+        void main(){vA=aAlpha;vC=aColor;vec4 mv=modelViewMatrix*vec4(position,1.0);
+          gl_PointSize=aSize*(240.0/max(0.1,-mv.z));gl_Position=projectionMatrix*mv;}`,
+      fragmentShader:`uniform sampler2D uTex;varying float vA;varying vec3 vC;
+        void main(){vec4 t=texture2D(uTex,gl_PointCoord);float a=t.a*vA;
+          gl_FragColor=vec4(vC*a*2.0,a);}`
+    }));
+    particles.frustumCulled=false;
+    pAttr=g.attributes;
+    scene.add(particles);
+  }
+
+  /* ---------- POST : bloom ---------- */
+  let hdrType=THREE.UnsignedByteType;
+  try{
+    if(renderer.capabilities.isWebGL2||renderer.extensions.get('OES_texture_half_float')) hdrType=THREE.HalfFloatType;
+  }catch(e){}
+  rtScene=makeRT(2,2,hdrType);rtBright=makeRT(2,2,hdrType);rtA=makeRT(2,2,hdrType);rtB=makeRT(2,2,hdrType);
+  rtBright.depthBuffer=rtA.depthBuffer=rtB.depthBuffer=false;
+
+  quadScene=new THREE.Scene();
+  quadCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+  const VS=`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}`;
+
+  matBright=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{
+    tDiffuse:{value:null},uThresh:{value:0.62},uKnee:{value:0.35}},
+    vertexShader:VS,
+    fragmentShader:`varying vec2 vUv;uniform sampler2D tDiffuse;uniform float uThresh,uKnee;
+      void main(){vec3 c=texture2D(tDiffuse,vUv).rgb;
+        float br=max(c.r,max(c.g,c.b));
+        float s=clamp((br-uThresh)/max(0.0001,uKnee),0.0,1.0);
+        gl_FragColor=vec4(c*s*s,1.0);}`});
+
+  matBlur=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{
+    tDiffuse:{value:null},uDir:{value:new THREE.Vector2(1,0)},uTexel:{value:new THREE.Vector2(1,1)},uRadius:{value:1}},
+    vertexShader:VS,
+    fragmentShader:`varying vec2 vUv;uniform sampler2D tDiffuse;uniform vec2 uDir,uTexel;uniform float uRadius;
+      void main(){
+        vec2 o=uDir*uTexel*uRadius;
+        vec3 s=texture2D(tDiffuse,vUv).rgb*0.2270270270;
+        s+=texture2D(tDiffuse,vUv+o*1.3846153846).rgb*0.3162162162;
+        s+=texture2D(tDiffuse,vUv-o*1.3846153846).rgb*0.3162162162;
+        s+=texture2D(tDiffuse,vUv+o*3.2307692308).rgb*0.0702702703;
+        s+=texture2D(tDiffuse,vUv-o*3.2307692308).rgb*0.0702702703;
+        gl_FragColor=vec4(s,1.0);}`});
+
+  matComp=new THREE.ShaderMaterial({depthTest:false,depthWrite:false,uniforms:{
+    tScene:{value:null},tBloom:{value:null},uStrength:{value:0.9},uFlash:{value:0},
+    uAberr:{value:0.0016},uVig:{value:0.9},uTime:{value:0}},
+    vertexShader:VS,
+    fragmentShader:`
+      varying vec2 vUv;uniform sampler2D tScene,tBloom;
+      uniform float uStrength,uFlash,uAberr,uVig,uTime;
+      vec3 aces(vec3 x){const float a=2.51,b=0.03,c=2.43,d=0.59,e=0.14;
+        return clamp((x*(a*x+b))/(x*(c*x+d)+e),0.0,1.0);}
+      void main(){
+        vec2 uv=vUv, d=uv-0.5;
+        float r2=dot(d,d);
+        vec2 off=d*uAberr*(1.0+r2*3.0);
+        vec3 col;
+        col.r=texture2D(tScene,uv+off).r;
+        col.g=texture2D(tScene,uv).g;
+        col.b=texture2D(tScene,uv-off).b;
+        vec3 bl;
+        bl.r=texture2D(tBloom,uv+off*1.6).r;
+        bl.g=texture2D(tBloom,uv).g;
+        bl.b=texture2D(tBloom,uv-off*1.6).b;
+        col+=bl*uStrength;
+        col+=uFlash;
+        col*=mix(1.0,smoothstep(0.85,0.12,r2),uVig);
+        col=aces(col*1.02);
+        col+= (fract(sin(dot(uv*vec2(93.1,417.7)+uTime,vec2(12.99,78.23)))*43758.5453)-0.5)*0.012;
+        gl_FragColor=vec4(pow(clamp(col,0.0,1.0),vec3(0.4545)),1.0);
+      }`});
+
+  quadMesh=new THREE.Mesh(new THREE.PlaneGeometry(2,2),matComp);
+  quadMesh.frustumCulled=false;quadScene.add(quadMesh);
+
+  onResize();
+  window.addEventListener('resize',onResize);
+}
+
+function onResize(){
+  const w=window.innerWidth,h=window.innerHeight;
+  W2=w;H2=h;
+  renderer.setSize(w,h);
+  camera.aspect=w/h;
+  // ปรับระยะกล้องให้การ์ดพอดีจอแนวตั้ง
+  camera.fov = w/h < 0.8 ? 52 : 42;
+  camera.updateProjectionMatrix();
+  const pw=Math.floor(w*DPR),ph=Math.floor(h*DPR);
+  rtScene.setSize(pw,ph);
+  const bw=Math.max(2,pw>>1),bh=Math.max(2,ph>>1);
+  rtBright.setSize(bw,bh);rtA.setSize(bw,bh);rtB.setSize(bw,bh);
+  matBlur.uniforms.uTexel.value.set(1/bw,1/bh);
+}
+
+function renderFrame(){
+  renderer.setRenderTarget(rtScene);
+  renderer.clear();
+  renderer.render(scene,camera);
+
+  quadMesh.material=matBright;
+  matBright.uniforms.tDiffuse.value=rtScene.texture;
+  renderer.setRenderTarget(rtBright);renderer.render(quadScene,quadCam);
+
+  quadMesh.material=matBlur;
+  const passes=[[rtBright,rtA,1,0,1],[rtA,rtB,0,1,1],[rtB,rtA,1,0,2.4],[rtA,rtB,0,1,2.4]];
+  for(let i=0;i<passes.length;i++){
+    const p=passes[i];
+    matBlur.uniforms.tDiffuse.value=p[0].texture;
+    matBlur.uniforms.uDir.value.set(p[2],p[3]);
+    matBlur.uniforms.uRadius.value=p[4];
+    renderer.setRenderTarget(p[1]);renderer.render(quadScene,quadCam);
+  }
+
+  quadMesh.material=matComp;
+  matComp.uniforms.tScene.value=rtScene.texture;
+  matComp.uniforms.tBloom.value=rtB.texture;
+  renderer.setRenderTarget(null);
+  renderer.render(quadScene,quadCam);
+}
+/* =========================================================================
+   PART 4 — เสียง / ลำดับการเปิดซอง / UI / คลังการ์ด / ตัวแก้ไขรายชื่อ
+   ========================================================================= */
+const SFX={
+  ctx:null,master:null,noise:null,
+  ensure(){
+    if(this.ctx){if(this.ctx.state==='suspended')this.ctx.resume();return this.ctx;}
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return null;
+    this.ctx=new AC();
+    this.master=this.ctx.createGain();
+    this.master.gain.value=SOUND_ON?0.85:0;
+    const comp=this.ctx.createDynamicsCompressor();
+    this.master.connect(comp);comp.connect(this.ctx.destination);
+    const len=this.ctx.sampleRate*2,buf=this.ctx.createBuffer(1,len,this.ctx.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+    this.noise=buf;
+    return this.ctx;
+  },
+  setOn(on){SOUND_ON=on;Store.set('ud_sound',on);if(this.master)this.master.gain.value=on?0.85:0;},
+  noiseSrc(){const s=this.ctx.createBufferSource();s.buffer=this.noise;s.loop=true;return s;},
+  env(node,t0,a,d,peak){
+    const g=this.ctx.createGain();g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0001,peak),t0+a);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+a+d);
+    node.connect(g);g.connect(this.master);return g;
+  },
+  blip(f,dur,type,vol){
+    const c=this.ensure();if(!c)return;const t=c.currentTime;
+    const o=c.createOscillator();o.type=type||'sine';o.frequency.setValueAtTime(f,t);
+    this.env(o,t,0.006,dur||0.12,vol||0.25);o.start(t);o.stop(t+(dur||0.12)+0.05);
+  },
+  charge(dur){
+    const c=this.ensure();if(!c)return;const t=c.currentTime;
+    const o=c.createOscillator();o.type='sawtooth';
+    o.frequency.setValueAtTime(70,t);o.frequency.exponentialRampToValueAtTime(760,t+dur);
+    const f=c.createBiquadFilter();f.type='lowpass';
+    f.frequency.setValueAtTime(320,t);f.frequency.exponentialRampToValueAtTime(4200,t+dur);
+    o.connect(f);
+    const g=c.createGain();g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.30,t+dur*0.92);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur+0.12);
+    f.connect(g);g.connect(this.master);o.start(t);o.stop(t+dur+0.2);
+
+    const n=this.noiseSrc();const nf=c.createBiquadFilter();nf.type='bandpass';nf.Q.value=2.4;
+    nf.frequency.setValueAtTime(400,t);nf.frequency.exponentialRampToValueAtTime(6500,t+dur);
+    n.connect(nf);
+    const ng=c.createGain();ng.gain.setValueAtTime(0.0001,t);
+    ng.gain.exponentialRampToValueAtTime(0.22,t+dur*0.95);
+    ng.gain.exponentialRampToValueAtTime(0.0001,t+dur+0.1);
+    nf.connect(ng);ng.connect(this.master);n.start(t);n.stop(t+dur+0.2);
+    // เสียงหัวใจเต้นถี่ขึ้น
+    for(let i=0,tt=0;tt<dur;i++){
+      const o2=c.createOscillator();o2.type='sine';
+      o2.frequency.setValueAtTime(58,t+tt);
+      this.env(o2,t+tt,0.01,0.16,0.32);o2.start(t+tt);o2.stop(t+tt+0.22);
+      tt+=Math.max(0.09,0.30-i*0.035);
+    }
+  },
+  burst(){
+    const c=this.ensure();if(!c)return;const t=c.currentTime;
+    const n=this.noiseSrc();const f=c.createBiquadFilter();f.type='lowpass';
+    f.frequency.setValueAtTime(9000,t);f.frequency.exponentialRampToValueAtTime(500,t+0.7);
+    n.connect(f);this.env(f,t,0.008,0.75,0.55);n.start(t);n.stop(t+1.0);
+    const o=c.createOscillator();o.type='sine';
+    o.frequency.setValueAtTime(190,t);o.frequency.exponentialRampToValueAtTime(38,t+0.55);
+    this.env(o,t,0.01,0.6,0.5);o.start(t);o.stop(t+0.8);
+  },
+  flip(){
+    const c=this.ensure();if(!c)return;const t=c.currentTime;
+    const n=this.noiseSrc();const f=c.createBiquadFilter();f.type='bandpass';f.Q.value=1.1;
+    f.frequency.setValueAtTime(900,t);f.frequency.exponentialRampToValueAtTime(3600,t+0.3);
+    n.connect(f);this.env(f,t,0.02,0.32,0.3);n.start(t);n.stop(t+0.5);
+  },
+  fanfare(rk){
+    const c=this.ensure();if(!c)return;const t=c.currentTime;
+    const sets={
+      bronze:[[196,0],[247,.09]],
+      silver:[[262,0],[330,.08],[392,.16]],
+      gold:[[330,0],[415,.08],[494,.16],[659,.26]],
+      hero:[[294,0],[370,.07],[440,.14],[587,.22],[740,.32],[880,.42]],
+      icon:[[262,0],[392,.06],[523,.12],[659,.18],[784,.26],[1047,.34],[1319,.44],[1568,.56]]
+    };
+    const notes=sets[rk]||sets.gold, big=(rk==='hero'||rk==='icon');
+    notes.forEach(([f,dt])=>{
+      const o=c.createOscillator();o.type=big?'sawtooth':'triangle';
+      o.frequency.setValueAtTime(f,t+dt);
+      const flt=c.createBiquadFilter();flt.type='lowpass';flt.frequency.value=big?5200:3000;
+      o.connect(flt);this.env(flt,t+dt,0.02,big?1.0:0.6,big?0.30:0.22);
+      o.start(t+dt);o.stop(t+dt+1.3);
+      const o2=c.createOscillator();o2.type='sine';o2.frequency.setValueAtTime(f*2,t+dt);
+      this.env(o2,t+dt,0.02,0.5,0.10);o2.start(t+dt);o2.stop(t+dt+0.8);
+    });
+    if(big){
+      const n=this.noiseSrc();const f=c.createBiquadFilter();f.type='highpass';f.frequency.value=5000;
+      n.connect(f);this.env(f,t,0.05,1.6,0.20);n.start(t);n.stop(t+2.0);
+      const sub=c.createOscillator();sub.type='sine';sub.frequency.setValueAtTime(46,t);
+      this.env(sub,t,0.03,1.2,0.55);sub.start(t);sub.stop(t+1.6);
+    }
+  }
+};
+
+/* ---------------------------------------------------------------- draw    */
+function pickCharacter(minIdx){
+  if(!ROSTER.length)return normChar({n:'ว่างเปล่า',r:60});
+  const groups={};
+  ROSTER.forEach(c=>{const k=rarityOf(c.r);(groups[k]=groups[k]||[]).push(c);});
+  let keys=RKEYS.filter(k=>groups[k]&&groups[k].length);
+  if(typeof minIdx==='number'){
+    const hi=keys.filter(k=>RKEYS.indexOf(k)>=minIdx);
+    if(hi.length)keys=hi;
+  }
+  let total=0;keys.forEach(k=>total+=RARITY[k].weight);
+  let x=Math.random()*total, chosen=keys[keys.length-1];
+  for(const k of keys){x-=RARITY[k].weight;if(x<=0){chosen=k;break;}}
+  const arr=groups[chosen];
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+
+/* ---------------------------------------------------------------- state   */
+let state='idle', tState=0, current=null, curR=RARITY.gold;
+let flash=0, shake=0, holoAmt=0, bannerFired=false;
+let curFrontTex=null;
+let shakeVec=null; // สร้างหลังโหลด THREE แล้ว (initThree)
+
+function setRarityLook(R){
+  curR=R;
+  const c=new THREE.Color(R.glow);
+  raysMesh.material.color.copy(c);
+  beam.material.uniforms.uColor.value.copy(c);
+  cardGlow.material.color.copy(c);
+  packGlow.material.color.copy(c);
+  bgMesh.material.uniforms.uTint.value.copy(c);
+  dust.material.uniforms.uColor.value.copy(c).lerp(new THREE.Color(0xffffff),.35);
+  groundGlow.material.color.copy(c);
+}
+
+function emitBurst(colorHex,count,mode,spread){
+  const col=new THREE.Color(colorHex);
+  const pos=pAttr.position.array,siz=pAttr.aSize.array,alp=pAttr.aAlpha.array,cAr=pAttr.aColor.array;
+  let made=0;
+  for(let i=0;i<P_COUNT&&made<count;i++){
+    if(pLife[i]>0)continue;
+    made++;
+    const tint=col.clone().lerp(new THREE.Color(0xffffff),Math.random()*0.55);
+    cAr[i*3]=tint.r;cAr[i*3+1]=tint.g;cAr[i*3+2]=tint.b;
+    if(mode===1){ // คอนเฟตติร่วง
+      pos[i*3]=(Math.random()-.5)*11;pos[i*3+1]=4.5+Math.random()*4;pos[i*3+2]=(Math.random()-.5)*4-.5;
+      pVel[i*3]=(Math.random()-.5)*.6;pVel[i*3+1]=-1.0-Math.random()*1.3;pVel[i*3+2]=(Math.random()-.5)*.4;
+      siz[i]=8+Math.random()*16;pMax[i]=pLife[i]=4.5+Math.random()*3;pType[i]=1;
+    }else{ // ระเบิดรัศมี
+      const a=Math.random()*Math.PI*2, b=Math.acos(2*Math.random()-1), sp=(spread||1)*(2.5+Math.random()*7.5);
+      pos[i*3]=0;pos[i*3+1]=0;pos[i*3+2]=0.2;
+      pVel[i*3]=Math.sin(b)*Math.cos(a)*sp;
+      pVel[i*3+1]=Math.cos(b)*sp*0.85+1.0;
+      pVel[i*3+2]=Math.sin(b)*Math.sin(a)*sp*0.5;
+      siz[i]=10+Math.random()*26;pMax[i]=pLife[i]=0.9+Math.random()*1.6;pType[i]=0;
+    }
+    alp[i]=1;
+  }
+  pAttr.position.needsUpdate=pAttr.aSize.needsUpdate=pAttr.aAlpha.needsUpdate=pAttr.aColor.needsUpdate=true;
+}
+
+function updateParticles(dt){
+  const pos=pAttr.position.array,alp=pAttr.aAlpha.array;
+  let live=false;
+  for(let i=0;i<P_COUNT;i++){
+    if(pLife[i]<=0){if(alp[i]!==0){alp[i]=0;}continue;}
+    live=true;
+    pLife[i]-=dt;
+    const k=Math.max(0,pLife[i]/pMax[i]);
+    if(pType[i]===0){
+      pVel[i*3+1]-=6.2*dt;
+      const drag=Math.pow(0.055,dt);
+      pVel[i*3]*=drag;pVel[i*3+1]*=Math.pow(0.35,dt);pVel[i*3+2]*=drag;
+    }else{
+      pVel[i*3]+=Math.sin(performance.now()*0.002+i)*dt*0.9;
+      pVel[i*3+1]-=0.35*dt;
+    }
+    pos[i*3]+=pVel[i*3]*dt;pos[i*3+1]+=pVel[i*3+1]*dt;pos[i*3+2]+=pVel[i*3+2]*dt;
+    alp[i]=pType[i]===1?Math.min(1,k*2.2):k*k;
+    if(pLife[i]<=0){alp[i]=0;pos[i*3+1]=999;}
+  }
+  pAttr.position.needsUpdate=true;pAttr.aAlpha.needsUpdate=true;
+  return live;
+}
+
+function applyCardTexture(ch){
+  const cv=renderCardFront(ch,1);
+  const tex=new THREE.CanvasTexture(cv);
+  tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+  tex.encoding=THREE.sRGBEncoding;tex.needsUpdate=true;
+  if(curFrontTex)curFrontTex.dispose();
+  curFrontTex=tex;
+  cardFront.material.map=tex;cardFront.material.needsUpdate=true;
+  cardHolo.material.uniforms.tCard.value=tex;
+}
+
+/* ---------------------------------------------------------------- flow    */
+function startPack(){
+  if(state!=='idle'&&state!=='show')return;
+  SFX.ensure();
+  hideCardUI();
+  state='charge';tState=0;bannerFired=false;
+  cardGroup.visible=false;holoAmt=0;
+  packGroup.visible=true;packGroup.scale.setScalar(1);
+  packGroup.position.set(0,0,0);packGroup.rotation.set(0,0,0);
+  current=pickCharacter();
+  setRarityLook(RARITY.gold);
+  document.getElementById('hint').classList.add('hide');
+  SFX.charge(1.35);
+}
+
+function doBurst(){
+  state='reveal';tState=0;
+  const R=RARITY[rarityOf(current.r)];
+  setRarityLook(R);
+  applyCardTexture(current);
+  packGroup.visible=false;
+  cardGroup.visible=true;
+  cardGroup.rotation.set(0,Math.PI,0);
+  cardGroup.scale.setScalar(0.001);
+  cardGroup.position.set(0,-0.9,0);
+  flash=1;shake=1;
+  emitBurst(R.glow,260,0,1.15);
+  SFX.burst();
+}
+
+function onRevealFront(){
+  const R=RARITY[rarityOf(current.r)];
+  const idx=RKEYS.indexOf(R.key);
+  SFX.fanfare(R.key);
+  emitBurst(R.glow,idx>=3?300:150,0,idx>=3?1.5:0.9);
+  if(idx>=2)emitBurst(R.glow,idx>=3?260:120,1);
+  flash=Math.max(flash,idx>=3?0.9:0.55);
+  shake=Math.max(shake,idx>=3?0.9:0.5);
+  const b=document.getElementById('banner');
+  document.getElementById('bannerTxt').textContent=R.label;
+  document.getElementById('bannerTxt').style.color='#'+new THREE.Color(R.glow).getHexString();
+  document.getElementById('bannerSub').textContent=R.th+' • '+current.r+' OVR';
+  b.classList.remove('play');void b.offsetWidth;b.classList.add('play');
+  addToCollection(current);
+}
+
+function showCardUI(){
+  const p=document.getElementById('plate');
+  document.getElementById('plateName').textContent=current.n;
+  document.getElementById('plateMeta').textContent=current.r+' OVR • '+current.p+' • '+current.c+' • '+current.t;
+  p.classList.add('on');
+  document.getElementById('actions').classList.remove('hide');
+}
+function hideCardUI(){
+  document.getElementById('plate').classList.remove('on');
+  document.getElementById('actions').classList.add('hide');
+}
+
+/* ---------------------------------------------------------------- loop    */
+let last=performance.now();
+function animate(){
+  requestAnimationFrame(animate);
+  const now=performance.now();
+  let dt=(now-last)/1000;last=now;
+  dt=Math.min(dt,0.05);
+  const t=now/1000;
+  tState+=dt;
+
+  mouse.x+=(mouse.tx-mouse.x)*Math.min(1,dt*6);
+  mouse.y+=(mouse.ty-mouse.y)*Math.min(1,dt*6);
+
+  bgMesh.material.uniforms.uTime.value=t;
+  bgMesh.rotation.y=t*0.008;
+  dust.material.uniforms.uTime.value=t;
+  packSparks.material.uniforms.uTime.value=t;
+  beam.material.uniforms.uTime.value=t;
+  cardHolo.material.uniforms.uTime.value=t;
+  matComp.uniforms.uTime.value=t;
+  raysMesh.rotation.z=t*0.12;
+
+  let beamTarget=0,raysTarget=0,glowTarget=0;
+
+  if(state==='idle'){
+    packGroup.visible=true;
+    packGroup.position.y=Math.sin(t*1.1)*0.12;
+    packGroup.rotation.y=Math.sin(t*0.62)*0.42+mouse.x*0.5;
+    packGroup.rotation.x=Math.sin(t*0.48)*0.12-mouse.y*0.35;
+    packGroup.scale.setScalar(1+Math.sin(t*1.6)*0.012);
+    packGlow.material.opacity=0.42+Math.sin(t*2.1)*0.08;
+    packSparks.material.uniforms.uOp.value=0.7;
+    beamTarget=0.10;raysTarget=0.06;
+  }
+  else if(state==='charge'){
+    const p=clamp(tState/1.35,0,1);
+    const amp=Math.pow(p,2.4);
+    packGroup.position.set((Math.random()-.5)*amp*0.42,Math.sin(t*1.1)*0.1+(Math.random()-.5)*amp*0.42,amp*0.9);
+    packGroup.rotation.y+=dt*(1.2+p*22);
+    packGroup.rotation.z=Math.sin(t*30)*amp*0.12;
+    packGroup.scale.setScalar(1+amp*0.22);
+    packGlow.material.opacity=0.45+amp*1.5;
+    packSparks.material.uniforms.uOp.value=0.7+amp*2.2;
+    beamTarget=0.10+amp*0.5;raysTarget=0.05+amp*0.55;
+    matComp.uniforms.uStrength.value=0.9+amp*1.5;
+    if(p>=1)doBurst();
+  }
+  else if(state==='reveal'){
+    const T=tState;
+    // ผุดขึ้น
+    const sIn=clamp(T/0.55,0,1);
+    cardGroup.scale.setScalar(0.001+easeOutBack(sIn)*1.0);
+    cardGroup.position.y=lerp(-0.9,0,easeOutCubic(sIn));
+    // พลิก
+    const f=clamp((T-0.55)/0.95,0,1);
+    cardGroup.rotation.y=Math.PI*(1-easeInOutCubic(f));
+    if(!bannerFired&&T>=0.55+0.95*0.52){bannerFired=true;onRevealFront();}
+    if(Math.abs(T-0.55)<dt)SFX.flip();
+    cardGroup.rotation.z=Math.sin(T*4.0)*0.05*(1-f);
+    holoAmt=lerp(holoAmt,f,Math.min(1,dt*5));
+    beamTarget=0.75;raysTarget=0.75;glowTarget=0.9;
+    if(T>1.75){state='show';tState=0;showCardUI();}
+  }
+  else if(state==='show'){
+    const idx=RKEYS.indexOf(curR.key);
+    cardGroup.position.y=Math.sin(t*1.05)*0.07;
+    cardGroup.rotation.y=lerp(cardGroup.rotation.y,mouse.x*0.55,Math.min(1,dt*4))+Math.sin(t*0.5)*0.0016;
+    cardGroup.rotation.x=lerp(cardGroup.rotation.x,-mouse.y*0.4,Math.min(1,dt*4));
+    cardGroup.rotation.z=lerp(cardGroup.rotation.z,mouse.x*0.06,Math.min(1,dt*4));
+    cardGroup.scale.setScalar(1+Math.sin(t*1.7)*0.006);
+    holoAmt=lerp(holoAmt,idx>=3?1.0:idx>=2?0.75:0.45,Math.min(1,dt*3));
+    beamTarget=0.28+idx*0.11;raysTarget=0.22+idx*0.13;glowTarget=0.28+idx*0.14;
+    matComp.uniforms.uStrength.value=lerp(matComp.uniforms.uStrength.value,0.85+idx*0.14,Math.min(1,dt*2));
+    if(idx>=3&&Math.random()<dt*1.6)emitBurst(curR.glow,3,1);
+  }
+
+  cardHolo.material.uniforms.uAmt.value=holoAmt;
+  cardHolo.material.uniforms.uTilt.value.set(mouse.x,mouse.y);
+  beam.material.uniforms.uOpacity.value=lerp(beam.material.uniforms.uOpacity.value,beamTarget,Math.min(1,dt*4));
+  raysMesh.material.opacity=lerp(raysMesh.material.opacity,raysTarget,Math.min(1,dt*4));
+  cardGlow.material.opacity=lerp(cardGlow.material.opacity,glowTarget,Math.min(1,dt*4));
+  groundGlow.material.opacity=lerp(groundGlow.material.opacity,0.18+beamTarget*0.3,Math.min(1,dt*3));
+  if(state!=='charge')matComp.uniforms.uStrength.value=lerp(matComp.uniforms.uStrength.value,1.0,Math.min(1,dt*2));
+
+  updateParticles(dt);
+
+  // แฟลช + สั่นจอ
+  flash=Math.max(0,flash-dt*2.1);
+  matComp.uniforms.uFlash.value=flash*0.9;
+  document.getElementById('flashfx').style.opacity=String(Math.min(1,flash*0.8));
+  shake=Math.max(0,shake-dt*2.6);
+  shakeVec.set((Math.random()-.5)*shake*0.28,(Math.random()-.5)*shake*0.28,0);
+  camera.position.set(shakeVec.x+mouse.x*0.42,shakeVec.y-mouse.y*0.30,6.6-shake*0.25);
+  camera.lookAt(0,0,0);
+  matComp.uniforms.uAberr.value=0.0014+shake*0.006;
+
+  renderFrame();
+}
+
+/* ---------------------------------------------------------------- collection */
+const thumbCache={};
+function ckey(c){return c.n+'|'+c.r;}
+function addToCollection(ch){
+  const k=ckey(ch);
+  const found=COLLECTION.find(x=>ckey(x)===k);
+  if(found)found.cnt=(found.cnt||1)+1;
+  else COLLECTION.push(Object.assign({},ch,{cnt:1}));
+  Store.set('ud_coll',COLLECTION);
+  updateCollCount();
+}
+function updateCollCount(){
+  let n=0;COLLECTION.forEach(c=>n+=c.cnt||1);
+  document.getElementById('collCount').textContent=n;
+}
+function thumbFor(ch){
+  const k=ckey(ch);
+  if(!thumbCache[k])thumbCache[k]=renderCardFront(ch,0.30).toDataURL('image/png');
+  return thumbCache[k];
+}
+let collMode='coll';
+function renderCollection(list,title){
+  const grid=document.getElementById('collGrid');
+  const arr=list||COLLECTION.slice().sort((a,b)=>b.r-a.r);
+  grid.innerHTML='';
+  arr.forEach(c=>{
+    const d=document.createElement('div');d.className='cw';
+    d.innerHTML='<img alt="'+c.n+'" src="'+thumbFor(c)+'">'+((c.cnt&&c.cnt>1)?'<div class="cnt">x'+c.cnt+'</div>':'');
+    d.title=c.n+' • '+c.r+' • '+c.p;
+    grid.appendChild(d);
+  });
+  document.getElementById('collEmpty').style.display=arr.length?'none':'block';
+  document.querySelector('#mColl h2').textContent=title||'คลังการ์ด';
+  document.getElementById('btnClearColl').style.display=list?'none':'';
+  // อัตราดรอป
+  const odds=document.getElementById('odds');odds.innerHTML='';
+  if(!list){
+    const groups={};ROSTER.forEach(c=>{const k=rarityOf(c.r);groups[k]=(groups[k]||0)+1;});
+    const keys=RKEYS.filter(k=>groups[k]);
+    let total=0;keys.forEach(k=>total+=RARITY[k].weight);
+    keys.forEach(k=>{
+      const R=RARITY[k];
+      const d=document.createElement('div');d.className='o';
+      d.innerHTML='<b style="color:'+cssGlow(R)+'">'+(RARITY[k].weight/total*100).toFixed(1)+'%</b><span>'+R.label+' ('+groups[k]+')</span>';
+      odds.appendChild(d);
+    });
+  }
+}
+function cssGlow(R){return '#'+new THREE.Color(R.glow).getHexString();}
+
+/* ---------------------------------------------------------------- roster UI */
+let draft=[];
+function renderRoster(){
+  const tb=document.getElementById('rosterBody');tb.innerHTML='';
+  draft.forEach((c,i)=>{
+    const R=RARITY[rarityOf(c.r)];
+    const tr=document.createElement('tr');tr.className='row';
+    tr.innerHTML=
+      '<td><input class="inp" data-i="'+i+'" data-k="n" value="'+esc(c.n)+'"></td>'+
+      '<td><input class="inp" type="number" min="40" max="99" data-i="'+i+'" data-k="r" value="'+c.r+'"></td>'+
+      '<td><select class="inp" data-i="'+i+'" data-k="p">'+POSITIONS.map(p=>'<option'+(p===c.p?' selected':'')+'>'+p+'</option>').join('')+'</select></td>'+
+      '<td><input class="inp" data-i="'+i+'" data-k="c" value="'+esc(c.c)+'"></td>'+
+      '<td><input class="inp" data-i="'+i+'" data-k="t" value="'+esc(c.t)+'"></td>'+
+      '<td><span class="rchip" style="background:'+cssGlow(R)+'22;color:'+cssGlow(R)+';border:1px solid '+cssGlow(R)+'55">'+R.label+'</span></td>'+
+      '<td style="text-align:right"><button class="btn sm danger" data-del="'+i+'">✕</button></td>';
+    tb.appendChild(tr);
+  });
+  document.getElementById('rosterCount').textContent=draft.length+' ตัวละคร';
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+function parseBulk(txt){
+  return txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{
+    const p=l.split(/\s*[,\t|]\s*/);
+    return normChar({n:p[0],r:p[1],p:p[2],c:p[3],t:p[4]});
+  });
+}
+
+/* ---------------------------------------------------------------- wiring  */
+function $(id){return document.getElementById(id);}
+function openModal(id){$(id).classList.add('on');SFX.blip(660,.08,'triangle',.18);}
+function closeModal(id){$(id).classList.remove('on');}
+
+function bindUI(){
+  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{
+    e.target.closest('.modal').classList.remove('on');
+  }));
+  document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{
+    if(e.target===m)m.classList.remove('on');
+  }));
+
+  $('btnSound').addEventListener('click',()=>{
+    SFX.ensure();SFX.setOn(!SOUND_ON);
+    $('btnSound').innerHTML=(SOUND_ON?'🔊':'🔇')+'<span class="lbl">เสียง</span>';
+    if(SOUND_ON)SFX.blip(880,.1,'triangle',.2);
+  });
+  $('btnSound').innerHTML=(SOUND_ON?'🔊':'🔇')+'<span class="lbl">เสียง</span>';
+
+  $('btnColl').addEventListener('click',()=>{renderCollection();openModal('mColl');});
+  $('btnClearColl').addEventListener('click',()=>{
+    if(!confirm('ล้างคลังการ์ดทั้งหมด?'))return;
+    COLLECTION=[];Store.set('ud_coll',COLLECTION);updateCollCount();renderCollection();
+  });
+
+  $('btnRoster').addEventListener('click',()=>{
+    draft=ROSTER.map(c=>normChar(c));renderRoster();openModal('mRoster');
+  });
+  $('rosterBody').addEventListener('input',e=>{
+    const el=e.target;if(!el.dataset||el.dataset.i===undefined)return;
+    const i=+el.dataset.i,k=el.dataset.k;
+    draft[i][k]=k==='r'?clamp(Math.round(+el.value||60),40,99):el.value;
+    if(k==='r'){const R=RARITY[rarityOf(draft[i].r)];
+      const chip=el.closest('tr').querySelector('.rchip');
+      chip.textContent=R.label;chip.style.color=cssGlow(R);
+      chip.style.background=cssGlow(R)+'22';chip.style.border='1px solid '+cssGlow(R)+'55';}
+  });
+  $('rosterBody').addEventListener('click',e=>{
+    const b=e.target.closest('[data-del]');if(!b)return;
+    draft.splice(+b.dataset.del,1);renderRoster();
+  });
+  $('btnAddRow').addEventListener('click',()=>{
+    draft.push(normChar({n:'ตัวละครใหม่ '+(draft.length+1),r:75,p:'CM',c:'สังกัด',t:'ธีม'}));
+    renderRoster();
+    const b=$('rosterBody');b.parentElement.parentElement.scrollTop=999999;
+  });
+  $('btnSaveRoster').addEventListener('click',()=>{
+    if(!draft.length){alert('ต้องมีอย่างน้อย 1 ตัวละคร');return;}
+    ROSTER=draft.map(c=>normChar(c));Store.set('ud_roster',ROSTER);
+    for(const k in thumbCache)delete thumbCache[k];
+    closeModal('mRoster');SFX.blip(1046,.14,'triangle',.25);
+  });
+  $('btnResetRoster').addEventListener('click',()=>{
+    if(!confirm('คืนค่ารายชื่อเริ่มต้น?'))return;
+    draft=DEFAULT_ROSTER.map(c=>normChar(c));renderRoster();
+  });
+  $('btnBulk').addEventListener('click',()=>{
+    const w=$('bulkWrap');w.style.display=w.style.display==='none'?'block':'none';
+  });
+  $('btnBulkLoad').addEventListener('click',()=>{
+    $('bulkText').value=draft.map(c=>[c.n,c.r,c.p,c.c,c.t].join(', ')).join('\n');
+  });
+  $('btnBulkApply').addEventListener('click',()=>{
+    const a=parseBulk($('bulkText').value);
+    if(!a.length){alert('ไม่พบรายชื่อ');return;}
+    draft=a;renderRoster();
+  });
+  $('btnBulkAppend').addEventListener('click',()=>{
+    draft=draft.concat(parseBulk($('bulkText').value));renderRoster();
+  });
+  $('btnExport').addEventListener('click',()=>{
+    const blob=new Blob([JSON.stringify(draft,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='roster.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  });
+  $('btnImport').addEventListener('click',()=>$('fileIn').click());
+  $('fileIn').addEventListener('change',e=>{
+    const f=e.target.files[0];if(!f)return;
+    const rd=new FileReader();
+    rd.onload=()=>{try{
+      const j=JSON.parse(rd.result);
+      if(!Array.isArray(j))throw 0;
+      draft=j.map(o=>normChar({n:o.n||o.name,r:o.r||o.rating,p:o.p||o.position,c:o.c||o.club,t:o.t||o.theme}));
+      renderRoster();
+    }catch(err){alert('ไฟล์ JSON ไม่ถูกต้อง');}};
+    rd.readAsText(f);e.target.value='';
+  });
+
+  $('btnAgain').addEventListener('click',e=>{e.stopPropagation();startPack();});
+  $('btnX10').addEventListener('click',e=>{e.stopPropagation();openTen();});
+
+  // คลิกบนฉาก
+  renderer.domElement.addEventListener('pointerdown',()=>{
+    if(state==='idle')startPack();
+    else if(state==='show')startPack();
+    else if(state==='reveal'&&tState>0.9){tState=1.76;}
+  });
+  window.addEventListener('pointermove',e=>{
+    mouse.tx=(e.clientX/window.innerWidth-.5)*2;
+    mouse.ty=(e.clientY/window.innerHeight-.5)*2;
+  });
+  window.addEventListener('keydown',e=>{
+    if(e.code==='Space'||e.code==='Enter'){e.preventDefault();if(state==='idle'||state==='show')startPack();}
+  });
+}
+
+function openTen(){
+  const res=[];
+  for(let i=0;i<10;i++)res.push(pickCharacter(i===9?2:undefined));
+  res.forEach(c=>addToCollection(c));
+  res.sort((a,b)=>b.r-a.r);
+  renderCollection(res,'ผลการเปิด 10 ใบ');
+  openModal('mColl');
+  const best=RARITY[rarityOf(res[0].r)];
+  SFX.fanfare(best.key);
+  setRarityLook(best);
+  emitBurst(best.glow,220,1);
+  flash=.6;
+}
+
+/* ---------------------------------------------------------------- boot    */
+async function boot(){
+  try{ if(document.fonts&&document.fonts.ready)await document.fonts.ready; }catch(e){}
+  try{ if(document.fonts&&document.fonts.load){
+    await Promise.all([document.fonts.load('700 100px Teko'),document.fonts.load('900 100px "Noto Sans Thai"')]);
+  }}catch(e){}
+  ROSTER=ROSTER.map(c=>normChar(c));
+  initThree();
+  bindUI();
+  updateCollCount();
+  setRarityLook(RARITY.gold);
+  last=performance.now();
+  animate();
+  setTimeout(()=>document.getElementById('loader').classList.add('off'),320);
+}
+if(!window.THREE){
+  document.getElementById('loader').innerHTML='<div style="text-align:center;padding:20px"><p style="letter-spacing:0;font-size:14px;color:#ff9a9a">โหลดไลบรารี 3D ไม่สำเร็จ<br>กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วเปิดใหม่อีกครั้ง</p></div>';
+}else{
+  boot();
+}
+</script>
+</body>
+</html>
