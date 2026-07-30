@@ -28,6 +28,9 @@
   #vignette{position:absolute;inset:0;z-index:2;pointer-events:none;
     background:radial-gradient(ellipse at 50% 45%,transparent 35%,rgba(0,0,0,.55) 78%,rgba(0,0,0,.9) 100%);}
   #flashfx{position:absolute;inset:0;z-index:6;pointer-events:none;background:#fff;opacity:0;mix-blend-mode:screen}
+  /* จอดับก่อนเข้าฉากเปิดซอง — สไตล์ EA: หน้าจอดับวูบ แล้วโผล่มาในฉากสุ่มเลย */
+  #blackout{position:absolute;inset:0;z-index:16;pointer-events:none;background:#000;opacity:0;transition:opacity .4s ease}
+  #blackout.on{opacity:1}
 
   /* ---------- HUD ---------- */
   .hud{position:absolute;z-index:5}
@@ -102,6 +105,46 @@
   .sheet footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .sheet footer .sp{margin-left:auto}
 
+  /* ---------- confirm dialog ---------- */
+  .confirmModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+    padding:20px;background:rgba(2,4,10,.72);backdrop-filter:blur(10px)}
+  .confirmModal.on{display:flex;animation:fadeIn .2s ease}
+  .confirmSheet{width:min(380px,100%);background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    padding:26px 24px 20px;text-align:center;box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.04) inset;
+    transform:scale(.9) translateY(6px);opacity:0;animation:confirmPop .28s cubic-bezier(.2,.9,.25,1) forwards}
+  @keyframes confirmPop{to{transform:scale(1) translateY(0);opacity:1}}
+  .confirmIcon{width:52px;height:52px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;
+    font-size:24px;background:linear-gradient(160deg,rgba(244,208,63,.22),rgba(244,208,63,.05));
+    border:1px solid rgba(244,208,63,.4);color:var(--gold)}
+  .confirmIcon.danger{background:linear-gradient(160deg,rgba(255,90,90,.22),rgba(255,90,90,.05));
+    border-color:rgba(255,90,90,.45);color:#ff8a8a}
+  .confirmSheet h3{margin:0 0 8px;font-size:16px;font-weight:900;letter-spacing:.3px}
+  .confirmSheet p{margin:0 0 20px;font-size:13px;line-height:1.7;color:#b9c4dc;white-space:pre-line}
+  .confirmActions{display:flex;gap:10px;justify-content:center}
+  .confirmActions .btn{flex:1;justify-content:center}
+
+  /* ---------- toast notifications ---------- */
+  #toastWrap{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:70;
+    display:flex;flex-direction:column;gap:10px;align-items:center;pointer-events:none;width:min(420px,92vw)}
+  .toast{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;border-radius:13px;
+    background:var(--panel);border:1px solid var(--line);box-shadow:0 16px 40px rgba(0,0,0,.55);
+    font-size:13px;font-weight:600;color:var(--txt);opacity:0;transform:translateY(-16px) scale(.96);
+    transition:opacity .28s cubic-bezier(.2,.9,.25,1),transform .28s cubic-bezier(.2,.9,.25,1)}
+  .toast.show{opacity:1;transform:translateY(0) scale(1)}
+  .toast.hide{opacity:0;transform:translateY(-10px) scale(.97)}
+  .toast .ti{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+    font-size:13px;font-weight:900}
+  .toast.success .ti{background:rgba(83,222,140,.18);color:#5fe89b;border:1px solid rgba(95,232,155,.4)}
+  .toast.error .ti{background:rgba(255,90,90,.18);color:#ff8a8a;border:1px solid rgba(255,90,90,.4)}
+  .toast.info .ti{background:rgba(244,208,63,.18);color:var(--gold);border:1px solid rgba(244,208,63,.4)}
+  .toast.success{border-color:rgba(95,232,155,.35)}
+  .toast.error{border-color:rgba(255,90,90,.35)}
+  .toast .tm{flex:1;line-height:1.5}
+  .toast{pointer-events:auto}
+  .toast .act{flex:none;border:1px solid rgba(244,208,63,.5);background:rgba(244,208,63,.14);color:var(--gold);
+    padding:5px 11px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:.15s}
+  .toast .act:hover{background:rgba(244,208,63,.28)}
+
   /* ---------- roster table ---------- */
   table.roster{width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13px}
   table.roster th{text-align:left;font-size:11px;letter-spacing:1px;color:#8a97b4;font-weight:700;padding:0 8px 4px}
@@ -145,12 +188,280 @@
   #err{position:absolute;z-index:60;inset:auto 16px 16px 16px;background:#2a0d0d;border:1px solid #ff6b6b;
     color:#ffd6d6;padding:12px 14px;border-radius:12px;font-size:12px;display:none;white-space:pre-wrap}
 
+  /* ---------- WALKOUT : อุโมงค์ 3D จริง + ป้ายกระแทก ---------- */
+  #walkout{position:absolute;inset:0;z-index:14;display:none;overflow:hidden;
+    background:#02040a;opacity:0;transition:opacity .4s ease;
+    perspective:700px;perspective-origin:50% 50%}
+  #walkout.on{display:block;opacity:1}
+  #walkout.out{opacity:0}
+
+  /* กล้อง — ตัวนี้คือตัวที่สั่นตอนกระแทก */
+  #wkCam{position:absolute;inset:0;transform-style:preserve-3d}
+  @keyframes wkHit{
+    0%{transform:translate3d(0,0,0)}
+    12%{transform:translate3d(-1.4%,1%,0) rotate(-.5deg)}
+    26%{transform:translate3d(1.2%,-1.1%,0) rotate(.4deg)}
+    42%{transform:translate3d(-.8%,-.6%,0) rotate(-.25deg)}
+    60%{transform:translate3d(.5%,.6%,0) rotate(.15deg)}
+    100%{transform:translate3d(0,0,0) rotate(0)}}
+  #wkCam.hit{animation:wkHit .5s cubic-bezier(.36,.07,.19,.97)}
+  #wkCam.hitBig{animation:wkHit .8s cubic-bezier(.36,.07,.19,.97)}
+
+  /* วงแหวนอุโมงค์ที่วิ่งผ่านกล้องจริง ๆ */
+  #wkRings{position:absolute;inset:0;transform-style:preserve-3d}
+  .wkRing{position:absolute;left:50%;top:50%;
+    width:130vmin;height:130vmin;margin:-65vmin 0 0 -65vmin;
+    border:2px solid rgba(104,164,255,.55);border-radius:30px;
+    box-shadow:0 0 46px rgba(80,140,255,.3),inset 0 0 70px rgba(60,110,220,.16);
+    opacity:0;will-change:transform,opacity;
+    animation:wkRush var(--dur,3s) linear infinite var(--d,0s)}
+  @keyframes wkRush{
+    0%{transform:translateZ(-3200px) rotate(var(--r,0deg));opacity:0}
+    10%{opacity:.18}
+    72%{opacity:.9}
+    93%{opacity:.45}
+    100%{transform:translateZ(680px) rotate(var(--r,0deg));opacity:0}}
+  /* เร่งความเร็วเป็นช่วง ๆ ให้รู้สึกว่ากำลังพุ่งแรงขึ้น */
+  #walkout.spd2 .wkRing{animation-duration:calc(var(--dur,3s) * .6)}
+  #walkout.spd3 .wkRing{animation-duration:calc(var(--dur,3s) * .3);
+    border-color:rgba(150,200,255,.8)}
+
+  /* แสงปลายอุโมงค์ */
+  #wkCore{position:absolute;left:50%;top:50%;width:24vmin;height:24vmin;
+    margin:-12vmin 0 0 -12vmin;border-radius:50%;filter:blur(8px);
+    background:radial-gradient(circle,#e6f3ff,#66a8ff 32%,rgba(40,90,200,.28) 62%,transparent 76%);
+    animation:wkCore 2.1s ease-in-out infinite}
+  @keyframes wkCore{0%,100%{transform:scale(.8);opacity:.5}50%{transform:scale(1.2);opacity:.95}}
+  #walkout.spd3 #wkCore{animation-duration:.6s}
+
+  /* เส้นความเร็วพุ่งออกจากกลางจอ */
+  #wkStreak{position:absolute;inset:-45%;opacity:0;transition:opacity .5s ease;
+    background:repeating-conic-gradient(from 0deg at 50% 50%,
+      transparent 0deg 1.6deg,rgba(170,210,255,.6) 1.6deg 2deg,transparent 2deg 6deg);
+    -webkit-mask-image:radial-gradient(circle at 50% 50%,transparent 10%,#000 40%,transparent 78%);
+    mask-image:radial-gradient(circle at 50% 50%,transparent 10%,#000 40%,transparent 78%);
+    animation:wkSpin 7s linear infinite}
+  @keyframes wkSpin{to{transform:rotate(360deg)}}
+  #walkout.spd2 #wkStreak{opacity:.4}
+  #walkout.spd3 #wkStreak{opacity:.9}
+
+  /* หมอกที่พื้น */
+  #wkFog{position:absolute;left:-10%;right:-10%;bottom:-6%;height:42%;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 100%,rgba(150,190,255,.22),transparent 68%);
+    filter:blur(16px)}
+
+  /* แผ่นป้ายสองข้างผนัง (ที่ว่างรอเฉลย) */
+  .wkSlot{position:absolute;top:50%;width:21%;height:32%;margin-top:-16%;z-index:3;
+    background:linear-gradient(150deg,#121a2e,#0a1020 60%,#070c17);
+    border:1px solid rgba(150,190,255,.16);border-radius:18px;
+    box-shadow:inset 0 0 50px rgba(0,0,0,.85),0 0 30px rgba(0,0,0,.6);
+    display:grid;place-items:center;overflow:hidden;transition:.45s cubic-bezier(.2,.9,.25,1);
+    font-family:'Noto Sans Thai',sans-serif;font-weight:900;
+    font-size:clamp(13px,2.4vw,26px);color:#5f7093;text-align:center;padding:10px}
+  #wkSlotL{left:1.5%;transform:perspective(700px) rotateY(28deg)}
+  #wkSlotR{right:1.5%;transform:perspective(700px) rotateY(-28deg)}
+  .wkSlot.filled{border-color:rgba(232,220,192,.55);color:#f4ecd6;
+    background:linear-gradient(150deg,#202c4c,#141e34 60%,#0c1424);
+    box-shadow:inset 0 0 50px rgba(0,0,0,.7),0 0 40px rgba(232,220,192,.3)}
+  #wkSlotL.filled{transform:perspective(700px) rotateY(28deg) scale(1.08)}
+  #wkSlotR.filled{transform:perspective(700px) rotateY(-28deg) scale(1.08)}
+  /* ซ่อนป้ายไว้ก่อน ให้โผล่ทีละอันตอนเฉลย ไม่ใช่โผล่มาพร้อมกันทั้งคู่ */
+  #wkSlotL.wait{opacity:0;transform:perspective(700px) rotateY(28deg) translateX(-16px)}
+  #wkSlotR.wait{opacity:0;transform:perspective(700px) rotateY(-28deg) translateX(16px)}
+
+  /* เงาคน — โผล่จากปลายอุโมงค์แล้วพุ่งเข้าหากล้อง */
+  #wkFigure{position:absolute;left:50%;bottom:14%;width:26vmin;z-index:2;
+    transform:translate(-50%,0) translateZ(-2000px);opacity:0}
+  #wkFigure svg{width:100%;height:auto;display:block;
+    filter:drop-shadow(0 0 26px rgba(120,180,255,.55))}
+  #walkout.walk #wkFigure{animation:wkWalk 3s cubic-bezier(.55,0,.85,.65) forwards}
+  @keyframes wkWalk{
+    0%{transform:translate(-50%,0) translateZ(-2000px);opacity:0;filter:blur(5px)}
+    18%{opacity:.5}
+    62%{opacity:1;filter:blur(0)}
+    100%{transform:translate(-50%,0) translateZ(500px);opacity:1;filter:blur(4px)}}
+
+  /* ---- วงจรการเดิน : ขาสลับ แขนแกว่งสวนขา ตัวโยก+ถ่ายน้ำหนักซ้ายขวา ---- */
+  #wkFigure .wkLimb,#wkFigure .wkBob,#wkFigure .wkSway,#wkFigure .wkShadow{
+    transform-box:view-box;animation-timing-function:ease-in-out;
+    animation-iteration-count:infinite;animation-duration:var(--step,.78s)}
+  #wkFigure .wkLegA{transform-origin:52px 134px}
+  #wkFigure .wkLegB{transform-origin:68px 134px}
+  #wkFigure .wkArmA{transform-origin:33px 60px}
+  #wkFigure .wkArmB{transform-origin:87px 60px}
+  #wkFigure .wkBob,#wkFigure .wkSway,#wkFigure .wkShadow{transform-origin:60px 238px}
+
+  #wkFigure .wkLegA{animation-name:wkLegA}
+  #wkFigure .wkLegB{animation-name:wkLegB}
+  #wkFigure .wkArmA{animation-name:wkArmA}
+  #wkFigure .wkArmB{animation-name:wkArmB}
+  #wkFigure .wkBob{animation-name:wkBob}
+  #wkFigure .wkSway{animation-name:wkSway}
+  #wkFigure .wkShadow{animation-name:wkShadow}
+
+  /* เดินเข้าหากล้อง (มุมหน้าตรง) มุมแกว่งจึงแคบกว่ามุมข้าง */
+  @keyframes wkLegA{0%,100%{transform:rotate(15deg)}50%{transform:rotate(-13deg)}}
+  @keyframes wkLegB{0%,100%{transform:rotate(-13deg)}50%{transform:rotate(15deg)}}
+  @keyframes wkArmA{0%,100%{transform:rotate(-13deg)}50%{transform:rotate(13deg)}}
+  @keyframes wkArmB{0%,100%{transform:rotate(13deg)}50%{transform:rotate(-13deg)}}
+  /* ตัวโยกขึ้น 2 ครั้งต่อ 1 รอบก้าว — สูงสุดตอนขาผ่านกัน */
+  @keyframes wkBob{0%,100%{transform:translateY(0)}
+    25%{transform:translateY(-5px)}50%{transform:translateY(0)}75%{transform:translateY(-5px)}}
+  /* ถ่ายน้ำหนักซ้าย-ขวา 1 ครั้งต่อรอบก้าว — ตัวนี้ทำให้ดูเป็นคนเดินไม่ใช่หุ่น */
+  @keyframes wkSway{0%,100%{transform:translateX(2px) rotate(.9deg)}
+    50%{transform:translateX(-2px) rotate(-.9deg)}}
+  /* เงาหดตอนตัวลอยขึ้น */
+  @keyframes wkShadow{0%,100%{transform:scaleX(1);opacity:.45}
+    25%{transform:scaleX(.82);opacity:.28}50%{transform:scaleX(1);opacity:.45}
+    75%{transform:scaleX(.82);opacity:.28}}
+
+  /* จังหวะเงียบมืดก่อนเงาโผล่ — เพิ่มความลุ้น */
+  #wkDim{position:absolute;inset:0;z-index:4;background:#000;opacity:0;pointer-events:none;
+    transition:opacity .35s ease}
+  #walkout.hush #wkDim{opacity:.88}
+
+  /* ป้ายเฉลย — พุ่งจากไกล กระแทก เด้ง ค้าง แล้วผ่านหัวไป */
+  .wkPanel{position:absolute;inset:0;display:none;place-items:center;z-index:5;
+    transform-style:preserve-3d}
+  .wkPanel.go{display:grid;animation:wkSlam 2.4s cubic-bezier(.16,.86,.28,1) forwards}
+  @keyframes wkSlam{
+    0%{transform:translateZ(-2400px) rotateY(78deg) rotateZ(-16deg);opacity:0;filter:blur(10px)}
+    16%{opacity:1;filter:blur(2px)}
+    26%{transform:translateZ(150px) rotateY(-10deg) rotateZ(4deg);filter:blur(0)}
+    33%{transform:translateZ(-40px) rotateY(4deg) rotateZ(-1.5deg)}
+    40%{transform:translateZ(0) rotateY(0) rotateZ(0)}
+    /* ค้างให้อ่านทัน ~0.9 วิ */
+    78%{transform:translateZ(0) rotateY(0) rotateZ(0);opacity:1}
+    100%{transform:translateZ(950px) rotateY(0) rotateZ(3deg);opacity:0;filter:blur(4px)}}
+
+  .wkShape{position:relative;width:min(74vw,560px);aspect-ratio:1/1;
+    display:grid;place-items:center;
+    filter:drop-shadow(0 0 40px rgba(232,220,192,.55))}
+  .wkShape svg{position:absolute;inset:0;width:100%;height:100%}
+  .wkLabel{position:relative;z-index:2;
+    font-family:'Noto Sans Thai',sans-serif;font-weight:900;letter-spacing:0;
+    color:#fdf8ea;text-shadow:0 4px 26px rgba(0,0,0,.9);text-align:center;
+    line-height:1.1;padding:0 14%;font-size:clamp(17px,4.6vw,46px)}
+  /* ป้ายสามเหลี่ยมชี้ลง — ดันข้อความขึ้นบนให้อยู่ในเนื้อที่กว้าง */
+  #wkPos .wkLabel{transform:translateY(-16%)}
+
+  /* วาบขาวตอนกระแทก + ตอนเฉลยการ์ด */
+  #wkFlash{position:absolute;inset:0;z-index:6;background:#fff;opacity:0;pointer-events:none}
+  #wkFlash.pop{animation:wkPop .4s ease forwards}
+  @keyframes wkPop{0%{opacity:.9}100%{opacity:0}}
+  #walkout.blast #wkFlash{animation:wkBlast .5s ease forwards}
+  @keyframes wkBlast{0%{opacity:0}60%{opacity:1}100%{opacity:1}}
+
+  #wkSkip{position:absolute;right:16px;bottom:16px;z-index:7;opacity:.55}
+  #wkSkip:hover{opacity:1}
+
+  @media(max-width:640px){
+    .wkSlot{width:29%;height:24%;margin-top:-12%;font-size:clamp(11px,3.4vw,18px)}
+    #wkFigure{width:40vmin}
+    .wkRing{width:170vmin;height:170vmin;margin:-85vmin 0 0 -85vmin}
+  }
+
+  /* ---------- ประตูต้อนรับ (GATE) ---------- */
+  #gate{position:absolute;inset:0;z-index:50;overflow:hidden;opacity:1;transition:opacity .5s ease}
+  #gate.gone{opacity:0;pointer-events:none}
+  #gate.hidden{display:none}
+
+  /* ชั้นที่ถูกซูมทะลุเข้าไป — พุ่งเข้าหากล้อง */
+  #gate .zoom{position:absolute;inset:0;transform-origin:50% 50%;will-change:transform;
+    transition:transform 1.6s cubic-bezier(.55,.02,.86,.5)}
+  #gate.opening .zoom{transform:scale(13)}
+
+  /* แสงลอดตรงกลางรอยต่อประตู */
+  #gate .seam{position:absolute;top:0;bottom:0;left:50%;width:3px;transform:translateX(-50%) scaleY(.2);
+    background:linear-gradient(180deg,transparent,#fff6cf 18%,#fff 50%,#fff6cf 82%,transparent);
+    box-shadow:0 0 24px 8px rgba(244,208,63,.55),0 0 80px 26px rgba(244,208,63,.28);
+    opacity:.35;z-index:3;pointer-events:none;transition:transform .8s ease,opacity .8s ease}
+  #gate.opening .seam{transform:translateX(-50%) scaleY(1) scaleX(9);opacity:1;
+    transition:transform .9s cubic-bezier(.7,0,.35,1),opacity .9s ease}
+
+  /* เส้นแสงพุ่งเข้าหาจุดกลาง (ความรู้สึกเร่งความเร็ว) */
+  #gate .rush{position:absolute;inset:-50%;z-index:1;opacity:0;pointer-events:none;
+    transform-origin:50% 50%;
+    background:repeating-conic-gradient(from 0deg at 50% 50%,
+      transparent 0deg 1.7deg,rgba(244,208,63,.55) 1.7deg 2.1deg,transparent 2.1deg 5deg);
+    -webkit-mask-image:radial-gradient(circle at 50% 50%,transparent 6%,#000 34%,#000 62%,transparent 85%);
+    mask-image:radial-gradient(circle at 50% 50%,transparent 6%,#000 34%,#000 62%,transparent 85%);
+    transition:opacity .5s ease,transform 1.6s cubic-bezier(.55,.02,.86,.5)}
+  #gate.opening .rush{opacity:.85;transform:scale(3.4) rotate(9deg)}
+
+  /* อุโมงค์แสงหลังประตู */
+  #gate .core{position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
+    border-radius:50%;z-index:1;opacity:0;
+    background:radial-gradient(circle,#fff 0%,#fff3c4 26%,rgba(244,208,63,.55) 52%,transparent 74%);
+    transition:opacity .6s ease,transform 1.6s cubic-bezier(.55,.02,.86,.5)}
+  #gate.opening .core{opacity:1;transform:scale(120)}
+
+  /* บานประตู — แง้มออกพอให้พุ่งทะลุ */
+  #gate .door{position:absolute;top:0;bottom:0;width:50.6%;z-index:2;
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.05),transparent 30%),
+      repeating-linear-gradient(180deg,rgba(255,255,255,.035) 0 2px,transparent 2px 9px),
+      linear-gradient(105deg,#0a0f1c 0%,#141b30 38%,#0b1120 62%,#070b15 100%);
+    box-shadow:inset 0 0 140px rgba(0,0,0,.9);
+    transition:transform .95s cubic-bezier(.5,0,.2,1)}
+  #gate .door.l{left:0;border-right:2px solid rgba(244,208,63,.5)}
+  #gate .door.r{right:0;border-left:2px solid rgba(244,208,63,.5)}
+  #gate.opening .door.l{transform:translateX(-34%)}
+  #gate.opening .door.r{transform:translateX(34%)}
+
+  /* ลายทองบนบานประตู */
+  #gate .door::before{content:'';position:absolute;inset:8% 10%;
+    border:1px solid rgba(244,208,63,.22);border-radius:14px;
+    box-shadow:inset 0 0 60px rgba(244,208,63,.07)}
+  #gate .door::after{content:'';position:absolute;inset:0;
+    background:radial-gradient(circle at var(--gx,110%) 50%,rgba(244,208,63,.20),transparent 55%);
+    pointer-events:none}
+  #gate .door.l{--gx:108%}
+  #gate .door.r{--gx:-8%}
+
+  /* กลอนประตูวงกลม */
+  #gate .lock{position:absolute;top:50%;width:110px;height:110px;margin-top:-55px;border-radius:50%;
+    border:2px solid rgba(244,208,63,.45);background:radial-gradient(circle,rgba(244,208,63,.14),transparent 70%);
+    box-shadow:0 0 40px rgba(244,208,63,.25),inset 0 0 30px rgba(244,208,63,.18)}
+  #gate .door.l .lock{right:-55px}
+  #gate .door.r .lock{left:-55px}
+  #gate .lock::before{content:'';position:absolute;inset:18px;border-radius:50%;
+    border:1px dashed rgba(244,208,63,.4);animation:spin 9s linear infinite}
+  #gate.opening .lock{animation:lockPop .5s ease forwards}
+  @keyframes lockPop{to{transform:scale(1.9);opacity:0}}
+
+  /* จอขาววาบตอนพุ่งทะลุ */
+  #gate .whiteout{position:absolute;inset:0;z-index:5;background:#fff;opacity:0;pointer-events:none;
+    transition:opacity .45s ease}
+  #gate.opening .whiteout{opacity:1;transition:opacity .5s ease .95s}
+
+  /* เนื้อหาต้อนรับ */
+  #gate .inner{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:20px;text-align:center;padding:24px;
+    transition:opacity .5s ease,transform 1s cubic-bezier(.55,.02,.86,.5)}
+  #gate.opening .inner{opacity:0;transform:scale(2.6);pointer-events:none}
+  #gate .kicker{font-size:11px;letter-spacing:7px;color:#8c98b6;text-transform:uppercase}
+  #gate .title{font-family:'Teko',sans-serif;font-size:clamp(44px,11vw,104px);line-height:.95;letter-spacing:3px;
+    background:linear-gradient(180deg,#fffdf2,#f4d03f 55%,#a9791a);-webkit-background-clip:text;background-clip:text;
+    color:transparent;filter:drop-shadow(0 6px 30px rgba(244,208,63,.4))}
+  #gate .welcome{font-size:clamp(15px,4.2vw,21px);font-weight:700;color:#eaf0ff}
+  #gate .desc{font-size:13px;color:#8c98b6;max-width:420px;line-height:1.7}
+  #gate .rule{width:min(320px,70vw);height:1px;background:linear-gradient(90deg,transparent,rgba(244,208,63,.6),transparent)}
+  #btnEnter{font-family:'Teko',sans-serif;font-size:26px;letter-spacing:4px;padding:14px 46px;border-radius:14px;
+    margin-top:6px;animation:enterPulse 2.1s ease-in-out infinite}
+  @keyframes enterPulse{0%,100%{box-shadow:0 8px 26px rgba(244,208,63,.35)}
+    50%{box-shadow:0 8px 40px rgba(244,208,63,.75),0 0 0 6px rgba(244,208,63,.08)}}
+  #gate .tip{font-size:11px;letter-spacing:2px;color:#6f7b96}
+
   @media(max-width:640px){
     .brand small{display:none}
     #topbar{padding:10px 12px;gap:6px}
     .btn{padding:8px 10px;font-size:12px}
     .lbl{display:none}
     #plate{bottom:122px}
+    #gate .lock{width:74px;height:74px;margin-top:-37px}
+    #gate .door.l .lock{right:-37px}
+    #gate .door.r .lock{left:-37px}
   }
 </style>
 </head>
@@ -159,14 +470,100 @@
   <div id="gl"></div>
   <div id="vignette"></div>
   <div id="flashfx"></div>
+  <div id="blackout"></div>
+
+  <!-- WALKOUT : อุโมงค์ → เฉลยตำแหน่ง → เฉลยแผนก → เงาเดินเข้า → การ์ด -->
+  <div id="walkout">
+    <div id="wkCam">
+      <div id="wkCore"></div>
+      <div id="wkRings"></div>
+      <div id="wkStreak"></div>
+      <div id="wkFog"></div>
+      <div class="wkSlot" id="wkSlotL">?</div>
+      <div class="wkSlot" id="wkSlotR">?</div>
+
+      <div id="wkFigure">
+        <!-- เงาคน : สัดส่วนคนจริง 8 หัว — ใช้ stroke-linejoin:round ทำให้ข้อต่อมนเป็นธรรมชาติ -->
+        <svg viewBox="0 0 120 248" aria-hidden="true">
+          <ellipse class="wkShadow" cx="60" cy="238" rx="34" ry="7" fill="#000" opacity=".45"/>
+          <g class="wkSway">
+           <g class="wkBob">
+            <!-- ขา/แขนฝั่งไกล (เข้มกว่า ให้เกิดระยะลึก) -->
+            <g class="wkLimb wkLegB" fill="#010308" stroke="#010308" stroke-width="13"
+               stroke-linejoin="round" stroke-linecap="round">
+              <polygon points="63,132 73,132 74,176 73,220 65,220 64,176"/>
+            </g>
+            <g class="wkLimb wkArmB" fill="#010308" stroke="#010308" stroke-width="10"
+               stroke-linejoin="round" stroke-linecap="round">
+              <polygon points="88,58 95,62 93,100 89,120 83,118 85,98"/>
+            </g>
+
+            <!-- ลำตัว + คอ + หัว -->
+            <g fill="#04060e" stroke="#04060e" stroke-width="6"
+               stroke-linejoin="round" stroke-linecap="round">
+              <path d="M60,10 C69,10 76,19 76,29 C76,37 73,43 69,46 L69,52
+                       C79,55 86,62 88,73 L91,108 C92,116 91,122 89,128 L86,136
+                       L34,136 L31,128 C29,122 28,116 29,108 L32,73
+                       C34,62 41,55 51,52 L51,46 C47,43 44,37 44,29 C44,19 51,10 60,10 Z"/>
+            </g>
+
+            <!-- ขา/แขนฝั่งใกล้ -->
+            <g class="wkLimb wkLegA" fill="#04060e" stroke="#04060e" stroke-width="13"
+               stroke-linejoin="round" stroke-linecap="round">
+              <polygon points="47,132 57,132 56,176 55,220 47,220 46,176"/>
+            </g>
+            <g class="wkLimb wkArmA" fill="#04060e" stroke="#04060e" stroke-width="10"
+               stroke-linejoin="round" stroke-linecap="round">
+              <polygon points="32,58 25,62 27,100 31,120 37,118 35,98"/>
+            </g>
+           </g>
+          </g>
+        </svg>
+      </div>
+
+      <!-- ป้ายเฉลยที่ 1 : ตำแหน่ง (สามเหลี่ยมชี้ลง) -->
+      <div class="wkPanel" id="wkPos">
+        <div class="wkShape">
+          <svg viewBox="0 0 200 200" preserveAspectRatio="none" aria-hidden="true">
+            <defs><linearGradient id="wkGrad1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#1d3340"/><stop offset="1" stop-color="#0a151f"/>
+            </linearGradient></defs>
+            <polygon points="20,36 180,36 100,174" fill="url(#wkGrad1)"
+              stroke="#e8dcc0" stroke-width="9" stroke-linejoin="round"/>
+          </svg>
+          <div class="wkLabel" id="wkPosTxt"></div>
+        </div>
+      </div>
+
+      <!-- ป้ายเฉลยที่ 2 : แผนก (สี่เหลี่ยมมุมมน) -->
+      <div class="wkPanel" id="wkDept">
+        <div class="wkShape">
+          <svg viewBox="0 0 200 200" preserveAspectRatio="none" aria-hidden="true">
+            <defs><linearGradient id="wkGrad2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#22304d"/><stop offset="1" stop-color="#0b1220"/>
+            </linearGradient></defs>
+            <rect x="22" y="22" width="156" height="156" rx="34" fill="url(#wkGrad2)"
+              stroke="#e8dcc0" stroke-width="9"/>
+          </svg>
+          <div class="wkLabel" id="wkDeptTxt"></div>
+        </div>
+      </div>
+    </div><!-- /#wkCam -->
+
+    <div id="wkDim"></div>
+    <div id="wkFlash"></div>
+    <button class="btn sm" id="wkSkip">ข้าม ⏭</button>
+  </div>
 
   <div class="hud" id="topbar">
     <div class="brand">
       <div class="mark">U</div>
       <div><b>ULTIMATE DRAW</b><small>PACK OPENING</small></div>
     </div>
+    <span class="btn" id="remainBox" title="คนที่ยังไม่ถูกสุ่ม / ทั้งหมด" style="cursor:default">
+      👥<span class="lbl">เหลือ</span> <b id="remainCount" style="color:var(--gold)">0 / 0</b></span>
+    <button class="btn" id="btnNewRound" title="เอาทุกคนกลับเข้ากอง">🔄<span class="lbl">เริ่มรอบใหม่</span></button>
     <button class="btn ghost" id="btnSound" title="เสียง">🔊<span class="lbl">เสียง</span></button>
-    <button class="btn" id="btnColl">🗂<span class="lbl">คลังการ์ด</span> <span id="collCount" style="opacity:.6">0</span></button>
     <button class="btn" id="btnRoster">⚙<span class="lbl">แก้ไขรายชื่อ</span></button>
   </div>
 
@@ -178,7 +575,6 @@
     <div id="hint">แตะที่ซองเพื่อเปิด</div>
     <div id="actions" class="hide">
       <button class="btn gold" id="btnAgain">เปิดซองอีกครั้ง</button>
-      <button class="btn" id="btnX10">เปิดรวด 10 ใบ</button>
     </div>
   </div>
 
@@ -202,15 +598,16 @@
   <div class="modal" id="mRoster">
     <div class="sheet">
       <header>
-        <h2>แก้ไขรายชื่อตัวละคร</h2>
+        <h2>แก้ไขรายชื่อผู้เข้าร่วม</h2>
         <button class="btn sm" id="btnBulk">วาง/นำเข้าแบบข้อความ</button>
         <button class="btn sm" data-close>ปิด</button>
       </header>
       <div class="body">
         <div id="bulkWrap" style="display:none;margin-bottom:16px">
-          <p class="note">วางทีละบรรทัด รูปแบบ: <b>ชื่อ, เรตติ้ง, ตำแหน่ง, สังกัด, ธีม</b> (ใส่แค่ชื่อก็ได้ ระบบจะสุ่มค่าที่เหลือให้)<br>
-          ตัวอย่าง: <code>ซากุระ, 91, CAM, Konoha, Fire</code></p>
-          <textarea class="inp" id="bulkText" placeholder="ชื่อ, 88, ST, ทีม, ธีม"></textarea>
+          <p class="note">วางทีละบรรทัด รูปแบบ: <b>ชื่อ, ตำแหน่ง, แผนก</b> (ใส่แค่ชื่อก็ได้)<br>
+          ตัวอย่าง: <code>สมชาย ใจดี, หัวหน้าทีม, บัญชี</code><br>
+          ทุกคนมีโอกาสถูกสุ่มเท่ากันเสมอ</p>
+          <textarea class="inp" id="bulkText" placeholder="สมชาย ใจดี, หัวหน้าทีม, บัญชี"></textarea>
           <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
             <button class="btn sm gold" id="btnBulkApply">แทนที่ทั้งหมด</button>
             <button class="btn sm" id="btnBulkAppend">เพิ่มต่อท้าย</button>
@@ -219,8 +616,8 @@
         </div>
         <table class="roster">
           <thead><tr>
-            <th style="width:30%">ชื่อตัวละคร</th><th style="width:11%">เรตติ้ง</th><th style="width:13%">ตำแหน่ง</th>
-            <th style="width:18%">สังกัด</th><th style="width:16%">ธีม</th><th style="width:12%">ระดับ</th><th></th>
+            <th style="width:42%">ชื่อ</th><th style="width:26%">ตำแหน่ง</th>
+            <th style="width:26%">แผนก</th><th></th>
           </tr></thead>
           <tbody id="rosterBody"></tbody>
         </table>
@@ -234,6 +631,42 @@
         <span class="note" id="rosterCount"></span>
         <button class="btn sm gold" id="btnSaveRoster">บันทึก</button>
       </footer>
+    </div>
+  </div>
+
+  <!-- CONFIRM DIALOG -->
+  <div class="confirmModal" id="mConfirm">
+    <div class="confirmSheet">
+      <div class="confirmIcon" id="confirmIcon">❔</div>
+      <h3 id="confirmTitle">ยืนยันการทำงาน</h3>
+      <p id="confirmMsg"></p>
+      <div class="confirmActions">
+        <button class="btn sm" id="confirmCancel">ยกเลิก</button>
+        <button class="btn sm gold" id="confirmOk">ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOASTS -->
+  <div id="toastWrap"></div>
+
+  <div id="gate" class="hidden">
+    <div class="zoom">
+      <div class="core"></div>
+      <div class="rush"></div>
+      <div class="door l"><div class="lock"></div></div>
+      <div class="door r"><div class="lock"></div></div>
+      <div class="seam"></div>
+    </div>
+    <div class="whiteout"></div>
+    <div class="inner">
+      <div class="kicker">Gacha Zone</div>
+      <div class="title">ULTIMATE DRAW</div>
+      <div class="rule"></div>
+      <div class="welcome">ยินดีต้อนรับเข้าสู่กาชา</div>
+      <div class="desc">เปิดซองสุ่มการ์ดตัวละคร ลุ้นระดับความหายาก<br>ตั้งแต่ SILVER จนถึงระดับตำนาน</div>
+      <button class="btn gold" id="btnEnter">เข้าสู่กาชา</button>
+      <div class="tip">แตะปุ่มเพื่อเปิดประตู</div>
     </div>
   </div>
 
@@ -277,35 +710,51 @@ function rarityOf(r){r=+r||0;return r>=92?'icon':r>=86?'hero':r>=78?'gold':r>=70
 
 /* ---------------------------------------------------------------- roster  */
 const POSITIONS=['GK','CB','LB','RB','CDM','CM','CAM','LW','RW','ST'];
+/* รายชื่อเริ่มต้น — n:ชื่อ, r:เรตติ้ง(คุมความหายากของการ์ด), p:ตำแหน่ง, c:แผนก, t:ธีม(ไม่บังคับ)
+   แก้/เพิ่มได้จากปุ่ม ⚙ แก้ไขรายชื่อ แล้วกดบันทึก — ระบบจะจำไว้ในเครื่องให้เอง
+   ใส่ r เท่ากันทุกคน = ทุกคนมีโอกาสออกการ์ดหายากเท่ากัน */
 const DEFAULT_ROSTER=[
-  {n:'อัศวินเพลิง',r:94,p:'ST',c:'Ember Order',t:'Fire'},
-  {n:'ราชันย์น้ำแข็ง',r:93,p:'CB',c:'Frost Realm',t:'Ice'},
-  {n:'เงาสายฟ้า',r:92,p:'RW',c:'Storm Clan',t:'Thunder'},
-  {n:'จอมเวทย์สายลม',r:90,p:'CAM',c:'Aether Guild',t:'Wind'},
-  {n:'นักล่าเงามืด',r:89,p:'LW',c:'Night Pact',t:'Shadow'},
-  {n:'ผู้พิทักษ์ศักดิ์สิทธิ์',r:88,p:'GK',c:'Dawn Temple',t:'Light'},
-  {n:'มังกรทมิฬ',r:87,p:'ST',c:'Wyrm Legion',t:'Dragon'},
-  {n:'ดาบเจ็ดดาว',r:86,p:'CM',c:'Star Blades',t:'Cosmos'},
-  {n:'พายุทราย',r:84,p:'CDM',c:'Dune Riders',t:'Earth'},
-  {n:'สายน้ำนิรันดร์',r:83,p:'CM',c:'Tide Court',t:'Water'},
-  {n:'เขี้ยวจันทรา',r:82,p:'LW',c:'Lunar Fang',t:'Beast'},
-  {n:'เกราะเหล็กกล้า',r:81,p:'CB',c:'Iron Wall',t:'Metal'},
-  {n:'ลูกศรพิษ',r:80,p:'RW',c:'Venom Hunt',t:'Poison'},
-  {n:'นักรบพเนจร',r:79,p:'ST',c:'Ronin Road',t:'Steel'},
-  {n:'ผู้เล่าเรื่องดาว',r:78,p:'CAM',c:'Star Blades',t:'Cosmos'},
-  {n:'กำแพงหิน',r:76,p:'CB',c:'Iron Wall',t:'Earth'},
-  {n:'ลมหมุน',r:75,p:'RB',c:'Aether Guild',t:'Wind'},
-  {n:'ประกายไฟ',r:74,p:'LB',c:'Ember Order',t:'Fire'},
-  {n:'หมอกขาว',r:73,p:'GK',c:'Frost Realm',t:'Ice'},
-  {n:'เท้าไว',r:72,p:'RW',c:'Dune Riders',t:'Wind'},
-  {n:'ผู้ฝึกหัด',r:70,p:'CM',c:'Dawn Temple',t:'Light'},
-  {n:'ทหารเลว',r:67,p:'CDM',c:'Ronin Road',t:'Steel'},
-  {n:'เด็กฝึกงาน',r:64,p:'LB',c:'Night Pact',t:'Shadow'},
-  {n:'ชาวบ้านกล้า',r:61,p:'ST',c:'Tide Court',t:'Water'}
+  {n:'สมชาย ใจดี',r:80,p:'หัวหน้าทีม',c:'บัญชี',t:''},
+  {n:'สมหญิง รักงาน',r:80,p:'เจ้าหน้าที่',c:'การตลาด',t:''},
+  {n:'วิชัย มั่นคง',r:80,p:'ผู้จัดการ',c:'ไอที',t:''}
 ];
+/* เปลี่ยนเลขนี้เมื่อแก้ DEFAULT_ROSTER ด้านบน เพื่อล้างรายชื่อเก่าที่ค้างในเครื่อง */
+const ROSTER_VER=2;
+/* เรตติ้งกลางที่ใช้กับทุกคน (ไม่มีช่องให้กรอกแล้ว) — ทุกคนจึงมีโอกาสถูกสุ่มเท่ากันเป๊ะ
+   ค่านี้คุมหน้าตาการ์ดด้วย: 70-77=ซิลเวอร์ / 78-85=โกลด์ / 86-91=ฮีโร่ / 92+=ไอคอน */
+const EVENT_RATING=80;
+// ถ้าเลขเวอร์ชันไม่ตรง = DEFAULT_ROSTER ถูกแก้ใหม่ → ทิ้งรายชื่อเก่าที่เซฟไว้
+if(Store.get('ud_roster_ver',0)!==ROSTER_VER){
+  Store.set('ud_roster',null);Store.set('ud_roster_ver',ROSTER_VER);
+}
 let ROSTER=Store.get('ud_roster',null)||DEFAULT_ROSTER.slice();
 let COLLECTION=Store.get('ud_coll',[]);
+let DRAWN=Store.get('ud_drawn',[]);   // ชื่อคนที่ถูกสุ่มไปแล้ว — ตัดออกจากกอง ไม่ให้ซ้ำ
 let SOUND_ON=Store.get('ud_sound',true);
+
+/* ---- เสียงตอนกดปุ่ม "เข้าสู่กาชา" ----------------------------------------
+   วางไฟล์ไว้โฟลเดอร์เดียวกับ html แล้วใส่ชื่อไฟล์ตรงนี้ (รองรับ .mp3 / .ogg / .wav / .m4a)
+   ถ้าหาไฟล์ไม่เจอ จะกลับไปใช้เสียงสังเคราะห์เดิมอัตโนมัติ */
+const GATE_SFX_URL='Midnight Closet.mp3';
+const GATE_SFX_VOL=1.0;    // ความดัง 0–1
+const GATE_SFX_START=0;    // เริ่มเล่นที่วินาทีที่เท่าไร (เช่น 12.5 = ข้ามอินโทร)
+const GATE_SFX_BGM=true;   // true = เล่นวนไม่มีกำหนดเป็นเพลงประกอบ | false = ค่อย ๆ หรี่ลงหลังประตูเปิดจบ
+let GATE_AUDIO=null;       // ตัวเล่นไฟล์ (ใช้ให้ปุ่มปิดเสียงคุมได้ด้วย)
+
+/* หรี่เพลงพื้นหลังลงตอนกำลังสุ่ม/เฉลย แล้วค่อยดังกลับหลังเฉลยจบ (ไม่ใช่หยุดเล่นแล้วเริ่มใหม่) */
+let musicFadeTimer=null;
+function fadeMusicTo(vol,ms){
+  const a=GATE_AUDIO; if(!a)return;
+  if(musicFadeTimer)clearInterval(musicFadeTimer);
+  const v0=a.volume,t0=Date.now();
+  musicFadeTimer=setInterval(()=>{
+    const k=Math.min(1,(Date.now()-t0)/ms);
+    a.volume=v0+(vol-v0)*k;
+    if(k>=1)clearInterval(musicFadeTimer);
+  },40);
+}
+function duckMusic(){ fadeMusicTo(SOUND_ON?GATE_SFX_VOL*0.12:0, 300); }
+function unduckMusic(){ fadeMusicTo(SOUND_ON?GATE_SFX_VOL:0, 500); }
 
 /* ---------------------------------------------------------------- utils   */
 function hash32(s){let h=2166136261>>>0;s=String(s);for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h>>>0;}
@@ -344,13 +793,13 @@ const STAT_LABEL={pac:'PAC',sho:'SHO',pas:'PAS',dri:'DRI',def:'DEF',phy:'PHY'};
 const GK_LABEL={pac:'DIV',sho:'HAN',pas:'KIC',dri:'REF',def:'SPD',phy:'POS'};
 
 function normChar(o){
-  const rnd=mulberry(hash32(o.n||'x'));
   return{
-    n:(o.n||'ไม่ระบุ').trim(),
-    r:clamp(Math.round(+o.r||(55+Math.floor(rnd()*40))),40,99),
-    p:POSITIONS.includes((o.p||'').toUpperCase())?(o.p).toUpperCase():POSITIONS[Math.floor(rnd()*POSITIONS.length)],
-    c:(o.c||'FREE AGENT').trim(),
-    t:(o.t||'NEUTRAL').trim()
+    n:String(o.n||'ไม่ระบุ').trim(),
+    r:clamp(Math.round(+o.r||EVENT_RATING),40,99),   // ไม่ระบุ = ใช้เรตติ้งกลาง ทุกคนเท่ากัน
+    // ตำแหน่งพิมพ์อิสระ (เช่น 'หัวหน้าทีม') — เว้นว่างได้ ไม่สุ่มตำแหน่งฟุตบอลมาใส่ทับ
+    p:String(o.p||'').trim(),
+    c:String(o.c||'').trim(),
+    t:String(o.t||'').trim()
   };
 }
 /* =========================================================================
@@ -511,8 +960,14 @@ function renderCardFront(ch,scale){
   ctx.font=TK(196,700);ctx.textBaseline='alphabetic';
   ctx.save();ctx.shadowColor='rgba(0,0,0,.28)';ctx.shadowBlur=14;ctx.shadowOffsetY=5;
   ctx.fillText(String(ch.r),CW*0.176,CH*0.183);ctx.restore();
-  ctx.font=TK(78,600);
-  ctx.fillText(ch.p,CW*0.176,CH*0.245);
+  // ตำแหน่งอาจเป็นข้อความไทยยาว ๆ (เช่น 'หัวหน้าทีม') — ย่อขนาดฟอนต์ให้พอดีช่อง ไม่ให้ล้นทับรูป
+  {
+    const maxW=CW*0.20;
+    let fs=78;
+    ctx.font=TH(fs,700);
+    while(ctx.measureText(ch.p).width>maxW&&fs>16){ fs-=2; ctx.font=TH(fs,700); }
+    ctx.fillText(ch.p,CW*0.176,CH*0.245);
+  }
 
   ctx.strokeStyle=R.line;ctx.lineWidth=4;
   ctx.beginPath();ctx.moveTo(CW*0.085,CH*0.268);ctx.lineTo(CW*0.268,CH*0.268);ctx.stroke();
@@ -1037,7 +1492,7 @@ const SFX={
     if(!AC)return null;
     this.ctx=new AC();
     this.master=this.ctx.createGain();
-    this.master.gain.value=SOUND_ON?0.85:0;
+    this.master.gain.value=SOUND_ON?1.05:0;
     const comp=this.ctx.createDynamicsCompressor();
     this.master.connect(comp);comp.connect(this.ctx.destination);
     const len=this.ctx.sampleRate*2,buf=this.ctx.createBuffer(1,len,this.ctx.sampleRate),d=buf.getChannelData(0);
@@ -1045,7 +1500,7 @@ const SFX={
     this.noise=buf;
     return this.ctx;
   },
-  setOn(on){SOUND_ON=on;Store.set('ud_sound',on);if(this.master)this.master.gain.value=on?0.85:0;},
+  setOn(on){SOUND_ON=on;Store.set('ud_sound',on);if(this.master)this.master.gain.value=on?1.05:0;},
   noiseSrc(){const s=this.ctx.createBufferSource();s.buffer=this.noise;s.loop=true;return s;},
   env(node,t0,a,d,peak){
     const g=this.ctx.createGain();g.gain.setValueAtTime(0.0001,t0);
@@ -1066,7 +1521,7 @@ const SFX={
     f.frequency.setValueAtTime(320,t);f.frequency.exponentialRampToValueAtTime(4200,t+dur);
     o.connect(f);
     const g=c.createGain();g.gain.setValueAtTime(0.0001,t);
-    g.gain.exponentialRampToValueAtTime(0.30,t+dur*0.92);
+    g.gain.exponentialRampToValueAtTime(0.44,t+dur*0.92);
     g.gain.exponentialRampToValueAtTime(0.0001,t+dur+0.12);
     f.connect(g);g.connect(this.master);o.start(t);o.stop(t+dur+0.2);
 
@@ -1074,7 +1529,7 @@ const SFX={
     nf.frequency.setValueAtTime(400,t);nf.frequency.exponentialRampToValueAtTime(6500,t+dur);
     n.connect(nf);
     const ng=c.createGain();ng.gain.setValueAtTime(0.0001,t);
-    ng.gain.exponentialRampToValueAtTime(0.22,t+dur*0.95);
+    ng.gain.exponentialRampToValueAtTime(0.32,t+dur*0.95);
     ng.gain.exponentialRampToValueAtTime(0.0001,t+dur+0.1);
     nf.connect(ng);ng.connect(this.master);n.start(t);n.stop(t+dur+0.2);
     // เสียงหัวใจเต้นถี่ขึ้น
@@ -1089,16 +1544,25 @@ const SFX={
     const c=this.ensure();if(!c)return;const t=c.currentTime;
     const n=this.noiseSrc();const f=c.createBiquadFilter();f.type='lowpass';
     f.frequency.setValueAtTime(9000,t);f.frequency.exponentialRampToValueAtTime(500,t+0.7);
-    n.connect(f);this.env(f,t,0.008,0.75,0.55);n.start(t);n.stop(t+1.0);
+    n.connect(f);this.env(f,t,0.008,0.75,0.72);n.start(t);n.stop(t+1.0);
     const o=c.createOscillator();o.type='sine';
     o.frequency.setValueAtTime(190,t);o.frequency.exponentialRampToValueAtTime(38,t+0.55);
-    this.env(o,t,0.01,0.6,0.5);o.start(t);o.stop(t+0.8);
+    this.env(o,t,0.01,0.6,0.65);o.start(t);o.stop(t+0.8);
   },
   flip(){
     const c=this.ensure();if(!c)return;const t=c.currentTime;
     const n=this.noiseSrc();const f=c.createBiquadFilter();f.type='bandpass';f.Q.value=1.1;
     f.frequency.setValueAtTime(900,t);f.frequency.exponentialRampToValueAtTime(3600,t+0.3);
     n.connect(f);this.env(f,t,0.02,0.32,0.3);n.start(t);n.stop(t+0.5);
+  },
+  /* เสียง "ฟุบ" เบสหนักแบบตอนป้ายเฉลยกระแทกจอ (สไตล์ EA) */
+  thump(){
+    const c=this.ensure();if(!c)return;const t=c.currentTime;
+    const o=c.createOscillator();o.type='sine';
+    o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(36,t+0.16);
+    this.env(o,t,0.003,0.24,0.6);o.start(t);o.stop(t+0.32);
+    const n=this.noiseSrc();const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=1100;
+    n.connect(f);this.env(f,t,0.002,0.05,0.22);n.start(t);n.stop(t+0.08);
   },
   fanfare(rk){
     const c=this.ensure();if(!c)return;const t=c.currentTime;
@@ -1129,10 +1593,34 @@ const SFX={
 };
 
 /* ---------------------------------------------------------------- draw    */
+/* ---- สุ่มแบบไม่ซ้ำ : ใครถูกสุ่มแล้วตัดออกจากกอง ---- */
+function pkey(c){return String(c.n||'').trim();}
+function remainingRoster(){
+  const out=new Set(DRAWN);
+  return ROSTER.filter(c=>!out.has(pkey(c)));
+}
+function markDrawn(c){
+  const k=pkey(c);
+  if(!k||DRAWN.indexOf(k)>=0)return;
+  DRAWN.push(k);Store.set('ud_drawn',DRAWN);
+  updateRemainLabel();
+}
+function resetDrawn(){
+  DRAWN=[];Store.set('ud_drawn',DRAWN);
+  updateRemainLabel();
+}
+function updateRemainLabel(){
+  const el=document.getElementById('remainCount');
+  if(el)el.textContent=remainingRoster().length+' / '+ROSTER.length;
+  const hint=document.getElementById('hint');
+  if(hint&&!remainingRoster().length)hint.textContent='สุ่มครบทุกคนแล้ว — กด "เริ่มรอบใหม่" เพื่อเริ่มอีกครั้ง';
+}
+
 function pickCharacter(minIdx){
-  if(!ROSTER.length)return normChar({n:'ว่างเปล่า',r:60});
+  const pool=remainingRoster();
+  if(!pool.length)return null;                     // หมดกองแล้ว
   const groups={};
-  ROSTER.forEach(c=>{const k=rarityOf(c.r);(groups[k]=groups[k]||[]).push(c);});
+  pool.forEach(c=>{const k=rarityOf(c.r);(groups[k]=groups[k]||[]).push(c);});
   let keys=RKEYS.filter(k=>groups[k]&&groups[k].length);
   if(typeof minIdx==='number'){
     const hi=keys.filter(k=>RKEYS.indexOf(k)>=minIdx);
@@ -1213,30 +1701,185 @@ function updateParticles(dt){
   return live;
 }
 
+/* แคชพื้นผิวการ์ดต่อคน — คนเดิมถูกสุ่มซ้ำในรอบใหม่ ไม่ต้องวาด canvas 900x1260 ใหม่ทุกครั้ง
+   (การวาดครั้งแรกยังทำล่วงหน้าตอนเริ่ม walkout แทนที่จะทำตอนวาบแสงเฉลยการ์ด กันสะดุด) */
+const cardTexCache={};
 function applyCardTexture(ch){
-  const cv=renderCardFront(ch,1);
-  const tex=new THREE.CanvasTexture(cv);
-  tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-  tex.encoding=THREE.sRGBEncoding;tex.needsUpdate=true;
-  if(curFrontTex)curFrontTex.dispose();
+  const k=ckey(ch);
+  let tex=cardTexCache[k];
+  if(!tex){
+    const cv=renderCardFront(ch,1);
+    tex=new THREE.CanvasTexture(cv);
+    tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
+    tex.encoding=THREE.sRGBEncoding;tex.needsUpdate=true;
+    cardTexCache[k]=tex;
+  }
   curFrontTex=tex;
   cardFront.material.map=tex;cardFront.material.needsUpdate=true;
   cardHolo.material.uniforms.tCard.value=tex;
 }
 
+/* ---------------------------------------------------------------- walkout */
+/* จังหวะแต่ละช่วง (มิลลิวินาที) — ปรับได้ตามใจ */
+const WK={
+  spdUp:1200,     // เริ่มเร่งความเร็วอุโมงค์
+  p1:2200,        // ป้ายที่ 1 พุ่งออกมา
+  impact:960,     // ป้ายกระแทกหยุดหลังพุ่งออกมากี่ ms (ตรงกับคีย์เฟรม 40% ของ 2.4s)
+  gap:2800,       // ระยะห่างระหว่างป้าย 1 → 2 (ต้อง > panel เพื่อไม่ให้ป้ายซ้อนกัน)
+  panel:2400,     // ความยาวอนิเมชันป้าย
+  hush:600,       // จังหวะมืดเงียบก่อนเงาโผล่ (ตัวเรียกความลุ้น)
+  walk:3000,      // เงาพุ่งเข้าหากล้อง
+  blast:520
+};
+let wkTimers=[], wkDone=false;
+
+function wkClear(){ wkTimers.forEach(clearTimeout); wkTimers=[]; }
+function wkAt(ms,fn){ wkTimers.push(setTimeout(fn,ms)); }
+
+/* วงแหวนอุโมงค์ — สร้างครั้งเดียวพอ */
+function wkBuildRings(){
+  const box=$('wkRings');
+  if(box.childElementCount)return;
+  const N=14, DUR=3;
+  let h='';
+  for(let i=0;i<N;i++){
+    h+='<div class="wkRing" style="--dur:'+DUR+'s;--d:'+(-(i/N)*DUR).toFixed(2)+
+       's;--r:'+((i%2?1:-1)*i*4)+'deg"></div>';
+  }
+  box.innerHTML=h;
+}
+
+/* กระแทก: สั่นกล้อง + วาบแสง */
+function wkImpact(big){
+  const cam=$('wkCam'), fl=$('wkFlash');
+  cam.classList.remove('hit','hitBig'); void cam.offsetWidth;
+  cam.classList.add(big?'hitBig':'hit');
+  fl.classList.remove('pop'); void fl.offsetWidth; fl.classList.add('pop');
+  shake=Math.max(shake, big?1:.7);
+}
+
+function startWalkout(){
+  const w=$('walkout');
+  wkClear(); wkDone=false;
+  state='walkout'; tState=0;
+  wkBuildRings();
+
+  // รีเซ็ตทุกอย่างให้เล่นใหม่ได้ (ต้อง reflow ก่อน ไม่งั้น animation ไม่รีสตาร์ท)
+  w.className='';
+  $('wkCam').classList.remove('hit','hitBig');
+  $('wkFlash').classList.remove('pop');
+  ['wkPos','wkDept'].forEach(id=>$(id).classList.remove('go'));
+  $('wkSlotL').classList.remove('filled'); $('wkSlotR').classList.remove('filled');
+  $('wkSlotL').classList.add('wait'); $('wkSlotR').classList.add('wait');
+  $('wkSlotL').textContent='?'; $('wkSlotR').textContent='?';
+  $('wkPosTxt').textContent=current.p||'—';
+  $('wkDeptTxt').textContent=current.c||'—';
+  void w.offsetWidth;
+
+  w.classList.add('on');
+  try{ SFX.charge(2.0); }catch(e){}
+
+  // เร่งความเร็วอุโมงค์
+  wkAt(WK.spdUp,()=>w.classList.add('spd2'));
+
+  // 1) ป้ายตำแหน่ง — พุ่ง → กระแทก → ค้าง → ผ่านหัวไป
+  wkAt(WK.p1,()=>{ $('wkPos').classList.add('go'); try{SFX.flip();}catch(e){} });
+  wkAt(WK.p1+WK.impact,()=>{
+    wkImpact(false);
+    $('wkSlotL').textContent=current.p||'—'; $('wkSlotL').classList.remove('wait'); $('wkSlotL').classList.add('filled');
+    try{SFX.thump();SFX.blip(760,.14,'triangle',.28);}catch(e){}
+  });
+  // เก็บป้ายที่ 1 ให้พ้นจอก่อน ป้ายที่ 2 ถึงจะมา (ให้เห็นทีละอันจริง ๆ)
+  wkAt(WK.p1+WK.panel,()=>$('wkPos').classList.remove('go'));
+
+  // 2) ป้ายแผนก
+  const t2=WK.p1+WK.gap;
+  wkAt(t2,()=>{ $('wkDept').classList.add('go'); try{SFX.flip();}catch(e){} });
+  wkAt(t2+WK.impact,()=>{
+    wkImpact(false);
+    $('wkSlotR').textContent=current.c||'—'; $('wkSlotR').classList.remove('wait'); $('wkSlotR').classList.add('filled');
+    try{SFX.thump();SFX.blip(940,.14,'triangle',.28);}catch(e){}
+  });
+  wkAt(t2+WK.panel,()=>$('wkDept').classList.remove('go'));
+
+  // 3) จังหวะมืดเงียบ — หยุดหายใจก่อนเฉลยคน
+  const tHush=t2+WK.panel;
+  wkAt(tHush,()=>w.classList.add('hush'));
+
+  // 4) เงาโผล่จากปลายอุโมงค์แล้วพุ่งเข้าหากล้อง + อุโมงค์เร่งสุด
+  const tWalk=tHush+WK.hush;
+  wkAt(tWalk,()=>{
+    w.classList.remove('hush');
+    w.classList.add('walk','spd3');
+    try{SFX.charge(2.8);}catch(e){}
+  });
+  wkAt(tWalk+WK.walk*0.45,()=>{ shake=Math.max(shake,.6); });
+  wkAt(tWalk+WK.walk*0.8,()=>{ shake=Math.max(shake,1); });
+
+  // 5) วาบขาว แล้วส่งต่อให้การ์ด
+  const tBlast=tWalk+WK.walk;
+  wkAt(tBlast,()=>{ w.classList.add('blast'); wkImpact(true); try{SFX.burst();}catch(e){} });
+  wkAt(tBlast+WK.blast,endWalkout);
+}
+
+function endWalkout(){
+  if(wkDone)return; wkDone=true;
+  wkClear();
+  const w=$('walkout');
+  doBurst();                       // เฉลยการ์ดคนที่สุ่มได้
+  w.classList.add('out');          // จางออกให้เห็นฉากการ์ด
+  setTimeout(()=>{ w.className=''; },500);
+}
+
 /* ---------------------------------------------------------------- flow    */
+let packBusy=false;
+function requestOpenPack(){
+  if(packBusy)return;
+  if(state!=='idle'&&state!=='show')return;
+  if(!ROSTER.length){
+    showToast('ยังไม่มีข้อมูลรายชื่อผู้จับรางวัล','error',{
+      label:'ไปหน้าแก้ไขรายชื่อ',
+      onClick:()=>{ draft=ROSTER.map(c=>normChar(c));renderRoster();openModal('mRoster'); }
+    });
+    return;
+  }
+  if(!remainingRoster().length){
+    showToast('สุ่มครบทุกคนแล้ว — กดปุ่ม "เริ่มรอบใหม่" เพื่อเอาทุกคนกลับเข้ากอง','info');
+    return;
+  }
+  packBusy=true;
+  showConfirm('ยืนยันเปิดซองใบนี้?',{title:'เปิดซอง',okText:'เปิดเลย'}).then(ok=>{
+    if(!ok){packBusy=false;return;}
+    try{duckMusic();}catch(e){}
+    const b=$('blackout');
+    b.classList.add('on');
+    setTimeout(()=>{
+      startPack();
+      setTimeout(()=>{ b.classList.remove('on'); packBusy=false; },260);
+    },420);
+  });
+}
 function startPack(){
   if(state!=='idle'&&state!=='show')return;
   SFX.ensure();
+  const pick=pickCharacter();
+  if(!pick){                       // สุ่มครบทุกคนแล้ว
+    updateRemainLabel();
+    document.getElementById('hint').classList.remove('hide');
+    try{SFX.blip(220,.18,'sine',.2);}catch(e){}
+    showToast('สุ่มครบทุกคนแล้ว — กดปุ่ม "เริ่มรอบใหม่" เพื่อเอาทุกคนกลับเข้ากอง','info');
+    return;
+  }
   hideCardUI();
-  state='charge';tState=0;bannerFired=false;
+  bannerFired=false;
   cardGroup.visible=false;holoAmt=0;
-  packGroup.visible=true;packGroup.scale.setScalar(1);
-  packGroup.position.set(0,0,0);packGroup.rotation.set(0,0,0);
-  current=pickCharacter();
+  packGroup.visible=false;
+  current=pick;
+  markDrawn(current);              // ตัดคนนี้ออกจากกองทันที
   setRarityLook(RARITY.gold);
   document.getElementById('hint').classList.add('hide');
-  SFX.charge(1.35);
+  applyCardTexture(current);       // วาดพื้นผิวการ์ดล่วงหน้าตอนนี้ กันอาการกระตุกตอนวาบแสงเฉลย
+  startWalkout();
 }
 
 function doBurst(){
@@ -1273,7 +1916,8 @@ function onRevealFront(){
 function showCardUI(){
   const p=document.getElementById('plate');
   document.getElementById('plateName').textContent=current.n;
-  document.getElementById('plateMeta').textContent=current.r+' OVR • '+current.p+' • '+current.c+' • '+current.t;
+  // แสดงแค่ ตำแหน่ง • แผนก (ข้ามช่องที่เว้นว่าง จะได้ไม่มีจุดคั่นค้าง)
+  document.getElementById('plateMeta').textContent=[current.p,current.c].filter(Boolean).join(' • ');
   p.classList.add('on');
   document.getElementById('actions').classList.remove('hide');
 }
@@ -1316,6 +1960,11 @@ function animate(){
     packSparks.material.uniforms.uOp.value=0.7;
     beamTarget=0.10;raysTarget=0.06;
   }
+  else if(state==='walkout'){
+    // ชั้น DOM คุมจังหวะเอง ฉาก 3D รออยู่เบื้องหลัง
+    packGroup.visible=false;
+    beamTarget=0.06;raysTarget=0.05;
+  }
   else if(state==='charge'){
     const p=clamp(tState/1.35,0,1);
     const amp=Math.pow(p,2.4);
@@ -1343,7 +1992,7 @@ function animate(){
     cardGroup.rotation.z=Math.sin(T*4.0)*0.05*(1-f);
     holoAmt=lerp(holoAmt,f,Math.min(1,dt*5));
     beamTarget=0.75;raysTarget=0.75;glowTarget=0.9;
-    if(T>1.75){state='show';tState=0;showCardUI();}
+    if(T>1.75){state='show';tState=0;showCardUI();try{unduckMusic();}catch(e){}}
   }
   else if(state==='show'){
     const idx=RKEYS.indexOf(curR.key);
@@ -1394,7 +2043,7 @@ function addToCollection(ch){
 }
 function updateCollCount(){
   let n=0;COLLECTION.forEach(c=>n+=c.cnt||1);
-  document.getElementById('collCount').textContent=n;
+  const el=document.getElementById('collCount');if(el)el.textContent=n;
 }
 function thumbFor(ch){
   const k=ckey(ch);
@@ -1409,7 +2058,7 @@ function renderCollection(list,title){
   arr.forEach(c=>{
     const d=document.createElement('div');d.className='cw';
     d.innerHTML='<img alt="'+c.n+'" src="'+thumbFor(c)+'">'+((c.cnt&&c.cnt>1)?'<div class="cnt">x'+c.cnt+'</div>':'');
-    d.title=c.n+' • '+c.r+' • '+c.p;
+    d.title=[c.n,c.p,c.c].filter(Boolean).join(' • ');
     grid.appendChild(d);
   });
   document.getElementById('collEmpty').style.display=arr.length?'none':'block';
@@ -1436,26 +2085,27 @@ let draft=[];
 function renderRoster(){
   const tb=document.getElementById('rosterBody');tb.innerHTML='';
   draft.forEach((c,i)=>{
-    const R=RARITY[rarityOf(c.r)];
     const tr=document.createElement('tr');tr.className='row';
+    // เหลือแค่ ชื่อ / ตำแหน่ง / แผนก — เรตติ้งกับธีมถูกกำหนดให้เท่ากันทุกคนเบื้องหลัง
     tr.innerHTML=
-      '<td><input class="inp" data-i="'+i+'" data-k="n" value="'+esc(c.n)+'"></td>'+
-      '<td><input class="inp" type="number" min="40" max="99" data-i="'+i+'" data-k="r" value="'+c.r+'"></td>'+
-      '<td><select class="inp" data-i="'+i+'" data-k="p">'+POSITIONS.map(p=>'<option'+(p===c.p?' selected':'')+'>'+p+'</option>').join('')+'</select></td>'+
-      '<td><input class="inp" data-i="'+i+'" data-k="c" value="'+esc(c.c)+'"></td>'+
-      '<td><input class="inp" data-i="'+i+'" data-k="t" value="'+esc(c.t)+'"></td>'+
-      '<td><span class="rchip" style="background:'+cssGlow(R)+'22;color:'+cssGlow(R)+';border:1px solid '+cssGlow(R)+'55">'+R.label+'</span></td>'+
+      '<td><input class="inp" data-i="'+i+'" data-k="n" value="'+esc(c.n)+'" placeholder="ชื่อ"></td>'+
+      '<td><input class="inp" data-i="'+i+'" data-k="p" value="'+esc(c.p)+'" placeholder="ตำแหน่ง"></td>'+
+      '<td><input class="inp" data-i="'+i+'" data-k="c" value="'+esc(c.c)+'" placeholder="แผนก"></td>'+
       '<td style="text-align:right"><button class="btn sm danger" data-del="'+i+'">✕</button></td>';
     tb.appendChild(tr);
   });
-  document.getElementById('rosterCount').textContent=draft.length+' ตัวละคร';
+  document.getElementById('rosterCount').textContent=draft.length+' คน';
 }
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 
 function parseBulk(txt){
   return txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{
-    const p=l.split(/\s*[,\t|]\s*/);
-    return normChar({n:p[0],r:p[1],p:p[2],c:p[3],t:p[4]});
+    const f=l.split(/\s*[,\t|]\s*/);
+    // รูปแบบใหม่: ชื่อ, ตำแหน่ง, แผนก
+    // ยังรับรูปแบบเดิมที่มีเรตติ้งคั่นกลางได้ด้วย: ชื่อ, 80, ตำแหน่ง, แผนก (ตัวเลขจะถูกข้าม)
+    const hasRating=f.length>1&&/^\d+$/.test(String(f[1]||'').trim());
+    const rest=hasRating?f.slice(2):f.slice(1);
+    return normChar({n:f[0],r:EVENT_RATING,p:rest[0],c:rest[1],t:''});
   });
 }
 
@@ -1463,6 +2113,70 @@ function parseBulk(txt){
 function $(id){return document.getElementById(id);}
 function openModal(id){$(id).classList.add('on');SFX.blip(660,.08,'triangle',.18);}
 function closeModal(id){$(id).classList.remove('on');}
+
+/* ---------------------------------------------------------------- confirm / toast */
+function showConfirm(msg,opts){
+  opts=opts||{};
+  return new Promise(resolve=>{
+    const modal=$('mConfirm'),okBtn=$('confirmOk'),cancelBtn=$('confirmCancel'),icon=$('confirmIcon');
+    $('confirmTitle').textContent=opts.title||'ยืนยันการทำงาน';
+    $('confirmMsg').textContent=msg;
+    icon.textContent=opts.danger?'⚠':'❔';
+    icon.className='confirmIcon'+(opts.danger?' danger':'');
+    okBtn.textContent=opts.okText||'ยืนยัน';
+    okBtn.className='btn sm '+(opts.danger?'danger':'gold');
+    cancelBtn.textContent=opts.cancelText||'ยกเลิก';
+    SFX.blip(660,.08,'triangle',.18);
+    modal.classList.add('on');
+    function cleanup(val){
+      modal.classList.remove('on');
+      okBtn.removeEventListener('click',onOk);
+      cancelBtn.removeEventListener('click',onCancel);
+      modal.removeEventListener('click',onBackdrop);
+      document.removeEventListener('keydown',onKey);
+      resolve(val);
+    }
+    function onOk(){SFX.blip(1046,.12,'triangle',.22);cleanup(true);}
+    function onCancel(){cleanup(false);}
+    function onBackdrop(e){if(e.target===modal)cleanup(false);}
+    function onKey(e){
+      if(e.key==='Escape'){e.preventDefault();cleanup(false);}
+      else if(e.key==='Enter'){e.preventDefault();onOk();}
+    }
+    okBtn.addEventListener('click',onOk);
+    cancelBtn.addEventListener('click',onCancel);
+    modal.addEventListener('click',onBackdrop);
+    document.addEventListener('keydown',onKey);
+  });
+}
+function showToast(msg,type,action){
+  type=type||'success';
+  const wrap=$('toastWrap');
+  const el=document.createElement('div');
+  el.className='toast '+type;
+  const icon=type==='success'?'✓':type==='error'?'✕':'ℹ';
+  el.innerHTML='<span class="ti">'+icon+'</span><span class="tm"></span>';
+  el.querySelector('.tm').textContent=msg;
+  let dur=2800;
+  if(action&&action.label){
+    dur=6000;
+    const btn=document.createElement('button');
+    btn.className='act';btn.textContent=action.label;
+    btn.addEventListener('click',()=>{
+      el.classList.remove('show');el.classList.add('hide');
+      setTimeout(()=>el.remove(),300);
+      action.onClick&&action.onClick();
+    });
+    el.appendChild(btn);
+  }
+  wrap.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>{
+    if(!el.isConnected)return;
+    el.classList.remove('show');el.classList.add('hide');
+    setTimeout(()=>el.remove(),300);
+  },dur);
+}
 
 function bindUI(){
   document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',e=>{
@@ -1474,15 +2188,18 @@ function bindUI(){
 
   $('btnSound').addEventListener('click',()=>{
     SFX.ensure();SFX.setOn(!SOUND_ON);
+    if(GATE_AUDIO)GATE_AUDIO.volume=SOUND_ON?GATE_SFX_VOL:0;   // คุมไฟล์เสียงประตูด้วย
     $('btnSound').innerHTML=(SOUND_ON?'🔊':'🔇')+'<span class="lbl">เสียง</span>';
     if(SOUND_ON)SFX.blip(880,.1,'triangle',.2);
   });
   $('btnSound').innerHTML=(SOUND_ON?'🔊':'🔇')+'<span class="lbl">เสียง</span>';
 
-  $('btnColl').addEventListener('click',()=>{renderCollection();openModal('mColl');});
-  $('btnClearColl').addEventListener('click',()=>{
-    if(!confirm('ล้างคลังการ์ดทั้งหมด?'))return;
+  $('btnClearColl').addEventListener('click',async()=>{
+    const ok=await showConfirm('ล้างคลังการ์ดทั้งหมด? การกระทำนี้ไม่สามารถย้อนกลับได้',
+      {title:'ล้างคลังการ์ด',danger:true,okText:'ล้างคลัง'});
+    if(!ok)return;
     COLLECTION=[];Store.set('ud_coll',COLLECTION);updateCollCount();renderCollection();
+    showToast('ล้างคลังการ์ดทั้งหมดแล้ว','success');
   });
 
   $('btnRoster').addEventListener('click',()=>{
@@ -1491,49 +2208,58 @@ function bindUI(){
   $('rosterBody').addEventListener('input',e=>{
     const el=e.target;if(!el.dataset||el.dataset.i===undefined)return;
     const i=+el.dataset.i,k=el.dataset.k;
-    draft[i][k]=k==='r'?clamp(Math.round(+el.value||60),40,99):el.value;
-    if(k==='r'){const R=RARITY[rarityOf(draft[i].r)];
-      const chip=el.closest('tr').querySelector('.rchip');
-      chip.textContent=R.label;chip.style.color=cssGlow(R);
-      chip.style.background=cssGlow(R)+'22';chip.style.border='1px solid '+cssGlow(R)+'55';}
+    draft[i][k]=el.value;   // มีแค่ช่องข้อความ (n/p/c) แล้ว
   });
   $('rosterBody').addEventListener('click',e=>{
     const b=e.target.closest('[data-del]');if(!b)return;
     draft.splice(+b.dataset.del,1);renderRoster();
   });
   $('btnAddRow').addEventListener('click',()=>{
-    draft.push(normChar({n:'ตัวละครใหม่ '+(draft.length+1),r:75,p:'CM',c:'สังกัด',t:'ธีม'}));
+    draft.push(normChar({n:'',r:EVENT_RATING,p:'',c:'',t:''}));
     renderRoster();
     const b=$('rosterBody');b.parentElement.parentElement.scrollTop=999999;
   });
-  $('btnSaveRoster').addEventListener('click',()=>{
-    if(!draft.length){alert('ต้องมีอย่างน้อย 1 ตัวละคร');return;}
+  $('btnSaveRoster').addEventListener('click',async()=>{
+    if(!draft.length){showToast('ต้องมีอย่างน้อย 1 ตัวละคร','error');return;}
+    const ok=await showConfirm('บันทึกรายชื่อผู้เข้าร่วมทั้งหมด '+draft.length+' คน?',
+      {title:'บันทึกข้อมูล',okText:'บันทึก'});
+    if(!ok)return;
     ROSTER=draft.map(c=>normChar(c));Store.set('ud_roster',ROSTER);
+    updateRemainLabel();
     for(const k in thumbCache)delete thumbCache[k];
     closeModal('mRoster');SFX.blip(1046,.14,'triangle',.25);
+    showToast('บันทึกรายชื่อผู้เข้าร่วมเรียบร้อยแล้ว','success');
   });
-  $('btnResetRoster').addEventListener('click',()=>{
-    if(!confirm('คืนค่ารายชื่อเริ่มต้น?'))return;
+  $('btnResetRoster').addEventListener('click',async()=>{
+    const ok=await showConfirm('คืนค่ารายชื่อเริ่มต้น? รายชื่อที่แก้ไขอยู่จะหายไป',
+      {title:'คืนค่าเริ่มต้น',danger:true,okText:'คืนค่า'});
+    if(!ok)return;
     draft=DEFAULT_ROSTER.map(c=>normChar(c));renderRoster();
+    showToast('คืนค่ารายชื่อเริ่มต้นแล้ว','success');
   });
   $('btnBulk').addEventListener('click',()=>{
     const w=$('bulkWrap');w.style.display=w.style.display==='none'?'block':'none';
   });
   $('btnBulkLoad').addEventListener('click',()=>{
-    $('bulkText').value=draft.map(c=>[c.n,c.r,c.p,c.c,c.t].join(', ')).join('\n');
+    $('bulkText').value=draft.map(c=>[c.n,c.p,c.c].join(', ')).join('\n');
   });
   $('btnBulkApply').addEventListener('click',()=>{
     const a=parseBulk($('bulkText').value);
-    if(!a.length){alert('ไม่พบรายชื่อ');return;}
+    if(!a.length){showToast('ไม่พบรายชื่อในข้อความที่วาง','error');return;}
     draft=a;renderRoster();
+    showToast('แทนที่รายชื่อทั้งหมด ('+a.length+' คน) แล้ว','success');
   });
   $('btnBulkAppend').addEventListener('click',()=>{
-    draft=draft.concat(parseBulk($('bulkText').value));renderRoster();
+    const a=parseBulk($('bulkText').value);
+    if(!a.length){showToast('ไม่พบรายชื่อในข้อความที่วาง','error');return;}
+    draft=draft.concat(a);renderRoster();
+    showToast('เพิ่มรายชื่อต่อท้าย '+a.length+' คนแล้ว','success');
   });
   $('btnExport').addEventListener('click',()=>{
     const blob=new Blob([JSON.stringify(draft,null,2)],{type:'application/json'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);
     a.download='roster.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    showToast('ส่งออกไฟล์ roster.json แล้ว','success');
   });
   $('btnImport').addEventListener('click',()=>$('fileIn').click());
   $('fileIn').addEventListener('change',e=>{
@@ -1544,17 +2270,34 @@ function bindUI(){
       if(!Array.isArray(j))throw 0;
       draft=j.map(o=>normChar({n:o.n||o.name,r:o.r||o.rating,p:o.p||o.position,c:o.c||o.club,t:o.t||o.theme}));
       renderRoster();
-    }catch(err){alert('ไฟล์ JSON ไม่ถูกต้อง');}};
+      showToast('นำเข้าไฟล์ JSON สำเร็จ ('+draft.length+' คน)','success');
+    }catch(err){showToast('ไฟล์ JSON ไม่ถูกต้อง','error');}};
     rd.readAsText(f);e.target.value='';
   });
 
-  $('btnAgain').addEventListener('click',e=>{e.stopPropagation();startPack();});
-  $('btnX10').addEventListener('click',e=>{e.stopPropagation();openTen();});
+  $('btnAgain').addEventListener('click',e=>{e.stopPropagation();requestOpenPack();});
+
+  // เริ่มรอบใหม่ — เอาทุกคนกลับเข้ากอง
+  $('btnNewRound').addEventListener('click',async e=>{
+    e.stopPropagation();
+    if(!DRAWN.length){showToast('ยังไม่มีใครถูกสุ่ม กองยังครบอยู่','info');return;}
+    const ok=await showConfirm('เอาทุกคนกลับเข้ากอง? ('+DRAWN.length+' คนที่สุ่มไปแล้วจะกลับมาสุ่มได้อีก)',
+      {title:'เริ่มรอบใหม่',okText:'เริ่มรอบใหม่'});
+    if(!ok)return;
+    resetDrawn();
+    $('hint').textContent='แตะที่ซองเพื่อเปิด';
+    SFX.blip(880,.12,'triangle',.22);
+    showToast('เริ่มรอบใหม่แล้ว ทุกคนกลับเข้ากองแล้ว','success');
+  });
+
+  // ข้าม walkout — กดปุ่มหรือแตะที่ไหนก็ได้
+  $('wkSkip').addEventListener('click',e=>{e.stopPropagation();endWalkout();});
+  $('walkout').addEventListener('pointerdown',()=>{ if(state==='walkout')endWalkout(); });
 
   // คลิกบนฉาก
   renderer.domElement.addEventListener('pointerdown',()=>{
-    if(state==='idle')startPack();
-    else if(state==='show')startPack();
+    if(state==='idle')requestOpenPack();
+    else if(state==='show')requestOpenPack();
     else if(state==='reveal'&&tState>0.9){tState=1.76;}
   });
   window.addEventListener('pointermove',e=>{
@@ -1562,22 +2305,66 @@ function bindUI(){
     mouse.ty=(e.clientY/window.innerHeight-.5)*2;
   });
   window.addEventListener('keydown',e=>{
-    if(e.code==='Space'||e.code==='Enter'){e.preventDefault();if(state==='idle'||state==='show')startPack();}
+    if(e.code==='Space'||e.code==='Enter'){e.preventDefault();if(state==='idle'||state==='show')requestOpenPack();}
   });
 }
 
-function openTen(){
-  const res=[];
-  for(let i=0;i<10;i++)res.push(pickCharacter(i===9?2:undefined));
-  res.forEach(c=>addToCollection(c));
-  res.sort((a,b)=>b.r-a.r);
-  renderCollection(res,'ผลการเปิด 10 ใบ');
-  openModal('mColl');
-  const best=RARITY[rarityOf(res[0].r)];
-  SFX.fanfare(best.key);
-  setRarityLook(best);
-  emitBurst(best.glow,220,1);
-  flash=.6;
+/* ---------------------------------------------------------------- gate    */
+/* ประตูต้อนรับ: โชว์หน้าจอ "ยินดีต้อนรับเข้าสู่กาชา" ก่อนเข้าเกม */
+function showGate(){
+  const gate=document.getElementById('gate');
+  gate.classList.remove('hidden','gone','opening');
+  const btn=document.getElementById('btnEnter');
+  let entering=false;
+
+  // เตรียมไฟล์เสียงล่วงหน้า (ถ้ามี) เพื่อให้เล่นทันทีตอนกดปุ่ม
+  // encodeURI เผื่อชื่อไฟล์มีเว้นวรรคหรืออักขระพิเศษ
+  if(GATE_SFX_URL&&!GATE_AUDIO){
+    try{
+      GATE_AUDIO=new Audio(encodeURI(GATE_SFX_URL));
+      GATE_AUDIO.preload='auto'; GATE_AUDIO.loop=GATE_SFX_BGM; GATE_AUDIO.load();
+    }catch(e){ GATE_AUDIO=null; }
+  }
+  // เอฟเฟกต์เสียงประตู (สังเคราะห์) — แยกอิสระจากเพลง เล่นทุกครั้งที่กดปุ่ม
+  const doorSfx=()=>{ try{ SFX.charge(1.45); setTimeout(()=>SFX.burst(),1400); }catch(e){} };
+
+  // หรี่เสียงลงเงียบ ๆ แทนการตัดจบห้วน ๆ
+  // ใช้ setInterval ไม่ใช่ requestAnimationFrame — rAF จะหยุดสนิทถ้าผู้ใช้สลับแท็บ
+  // ทำให้เพลงค้างเล่นไม่รู้จบ ส่วน setInterval ยังเดินต่อ (แค่ช้าลง) จนหรี่จบเสมอ
+  const fadeOutGate=(ms)=>{
+    const a=GATE_AUDIO; if(!a||a.paused)return;
+    const v0=a.volume,t0=Date.now();
+    const id=setInterval(()=>{
+      const k=Math.min(1,(Date.now()-t0)/ms);
+      a.volume=Math.max(0,v0*(1-k));
+      if(k>=1){ clearInterval(id); a.pause(); try{a.currentTime=GATE_SFX_START;}catch(e){} a.volume=GATE_SFX_VOL; }
+    },40);
+  };
+
+  btn.addEventListener('click',()=>{
+    if(entering)return; entering=true;
+    try{ SFX.ensure(); }catch(e){}   // ปลดล็อก AudioContext ด้วยการกดของผู้ใช้
+
+    // เอฟเฟกต์ประตูเล่นเสมอ ไม่ว่าเพลงพื้นหลังจะเล่นได้หรือไม่ก็ตาม (สองเสียงแยกกันอิสระ)
+    doorSfx();
+
+    if(GATE_AUDIO){
+      try{
+        try{ GATE_AUDIO.currentTime=GATE_SFX_START; }catch(e){}
+        GATE_AUDIO.volume=SOUND_ON?GATE_SFX_VOL:0;
+        const p=GATE_AUDIO.play();
+        // เพลงยาว: หรี่ลงหลังประตูเปิดจบ (ถ้าไม่ได้ตั้งให้เล่นวนไม่มีกำหนด)
+        if(!GATE_SFX_BGM)setTimeout(()=>fadeOutGate(1400),2200);
+      }catch(e){}
+    }
+
+    gate.classList.add('opening');
+    shake=Math.max(shake,0.5);                          // เริ่มสั่นเบา ๆ
+    setTimeout(()=>{ shake=Math.max(shake,1); },1150);  // สั่นแรงตอนพุ่งทะลุ
+    setTimeout(()=>{ flash=Math.max(flash,1); },1450);  // ส่งแฟลชขาวต่อให้ฉากในเกม
+    setTimeout(()=>gate.classList.add('gone'),1500);
+    setTimeout(()=>gate.classList.add('hidden'),2100);
+  });
 }
 
 /* ---------------------------------------------------------------- boot    */
@@ -1590,9 +2377,11 @@ async function boot(){
   initThree();
   bindUI();
   updateCollCount();
+  updateRemainLabel();
   setRarityLook(RARITY.gold);
   last=performance.now();
   animate();
+  showGate();
   setTimeout(()=>document.getElementById('loader').classList.add('off'),320);
 }
 if(!window.THREE){
