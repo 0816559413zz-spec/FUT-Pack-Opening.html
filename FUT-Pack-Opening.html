@@ -202,7 +202,12 @@
   #walkout{position:absolute;inset:0;z-index:14;display:none;overflow:hidden;
     background:#02040a;opacity:0;transition:opacity .4s ease;
     perspective:700px;perspective-origin:50% 50%;
-    --crestUp:86vh}   /* ระยะที่ตราสังกัดจอดอยู่เหนือเฟรม = ระยะที่กล้องต้องแพนขึ้นพอดี */
+    --crestUp:86vh;   /* ระยะที่ตราสังกัดจอดอยู่เหนือเฟรม = ระยะที่กล้องต้องแพนขึ้นพอดี */
+    --tone:210}       /* สีอุโมงค์ (วงแหวน/แสงปลายทาง/เส้นความเร็ว/หมอก) */
+  /* เปลี่ยนโทนพื้นหลังทุกครั้งที่ตัดฉาก — สลับตอนแผ่นดำบังจอ เลยไม่เห็นรอยต่อ */
+  #walkout.toneA{--tone:188}   /* จังหวะตำแหน่ง : ฟ้าอมเขียว */
+  #walkout.toneB{--tone:250}   /* จังหวะสังกัด  : น้ำเงินอมม่วง */
+  #walkout.toneC{--tone:42}    /* จังหวะคนเดินเข้า : ทอง — ไล่เข้าหาสีการ์ด */
   #walkout.on{display:block;opacity:1}
   #walkout.out{opacity:0}
 
@@ -232,8 +237,9 @@
   #wkRings{position:absolute;inset:0;transform-style:preserve-3d}
   .wkRing{position:absolute;left:50%;top:50%;
     width:130vmin;height:130vmin;margin:-65vmin 0 0 -65vmin;
-    border:2px solid rgba(104,164,255,.55);border-radius:30px;
-    box-shadow:0 0 46px rgba(80,140,255,.3),inset 0 0 70px rgba(60,110,220,.16);
+    border:2px solid hsla(var(--tone),100%,70%,.55);border-radius:30px;
+    box-shadow:0 0 46px hsla(var(--tone),100%,66%,.3),
+      inset 0 0 70px hsla(var(--tone),75%,55%,.16);
     opacity:0;will-change:transform,opacity;
     animation:wkRush var(--dur,3s) linear infinite var(--d,0s)}
   @keyframes wkRush{
@@ -245,12 +251,13 @@
   /* เร่งความเร็วเป็นช่วง ๆ ให้รู้สึกว่ากำลังพุ่งแรงขึ้น */
   #walkout.spd2 .wkRing{animation-duration:calc(var(--dur,3s) * .6)}
   #walkout.spd3 .wkRing{animation-duration:calc(var(--dur,3s) * .3);
-    border-color:rgba(150,200,255,.8)}
+    border-color:hsla(var(--tone),100%,80%,.8)}
 
   /* แสงปลายอุโมงค์ */
   #wkCore{position:absolute;left:50%;top:50%;width:24vmin;height:24vmin;
     margin:-12vmin 0 0 -12vmin;border-radius:50%;filter:blur(8px);
-    background:radial-gradient(circle,#e6f3ff,#66a8ff 32%,rgba(40,90,200,.28) 62%,transparent 76%);
+    background:radial-gradient(circle,#eaf5ff,hsl(var(--tone),100%,70%) 32%,
+      hsla(var(--tone),70%,47%,.28) 62%,transparent 76%);
     animation:wkCore 2.1s ease-in-out infinite}
   @keyframes wkCore{0%,100%{transform:scale(.8);opacity:.5}50%{transform:scale(1.2);opacity:.95}}
   #walkout.spd3 #wkCore{animation-duration:.6s}
@@ -258,7 +265,7 @@
   /* เส้นความเร็วพุ่งออกจากกลางจอ */
   #wkStreak{position:absolute;inset:-45%;opacity:0;transition:opacity .5s ease;
     background:repeating-conic-gradient(from 0deg at 50% 50%,
-      transparent 0deg 1.6deg,rgba(170,210,255,.6) 1.6deg 2deg,transparent 2deg 6deg);
+      transparent 0deg 1.6deg,hsla(var(--tone),100%,83%,.6) 1.6deg 2deg,transparent 2deg 6deg);
     -webkit-mask-image:radial-gradient(circle at 50% 50%,transparent 10%,#000 40%,transparent 78%);
     mask-image:radial-gradient(circle at 50% 50%,transparent 10%,#000 40%,transparent 78%);
     animation:wkSpin 7s linear infinite}
@@ -268,7 +275,7 @@
 
   /* หมอกที่พื้น */
   #wkFog{position:absolute;left:-10%;right:-10%;bottom:-6%;height:42%;pointer-events:none;
-    background:radial-gradient(ellipse at 50% 100%,rgba(150,190,255,.22),transparent 68%);
+    background:radial-gradient(ellipse at 50% 100%,hsla(var(--tone),85%,78%,.22),transparent 68%);
     filter:blur(16px)}
 
   /* แผ่นป้ายสองข้างผนัง (ที่ว่างรอเฉลย) */
@@ -365,26 +372,39 @@
      .wkShape = ตัวแผ่น หมุนรอบแกน Y 90 องศาพอดีแล้วหยุดนิ่ง */
   /* .wkPanel ต้องไม่มี transform 3D ของตัวเอง ไม่งั้นมันจะไปเรียงสลับความลึกกับฉากใน
      #wkWorld (แสงปลายอุโมงค์จะทะลุขึ้นมาหน้าแผ่น) — ยก perspective ทั้งชุดไปไว้ที่ .wkShape แทน */
-  .wkPanel{position:absolute;inset:0;display:none;place-items:center;z-index:5}
+  /* แผ่นไม่ได้จอดกลางจอนิ่ง ๆ — โผล่มาเยื้องข้างแล้วกล้องค่อยแพนเข้าหา (แบบ FIFA)
+     ทิศทางคุมด้วยตัวแปร จังหวะตำแหน่งเข้าจากขวา จังหวะสังกัดเข้าจากซ้าย
+     ใช้คีย์เฟรมชุดเดียวทั้งสองทาง แค่สลับค่าตัวแปร */
+  .wkPanel{position:absolute;inset:0;display:none;place-items:center;z-index:5;
+    --x0:19%;    /* จุดที่แผ่นโผล่มา (ขวา) */
+    --ry0:-25deg;/* มุมตอนโผล่ — กล้องมองจากอีกฝั่ง */
+    --ry1:-7deg} /* มุมตอนแพนถึงกลางจอ */
+  .wkPanel.fromL{--x0:-19%;--ry0:25deg;--ry1:7deg}
   .wkPanel.show{display:grid}
-  /* ท่าพัก: กล้องไม่ได้มองตรง ๆ — เฉียงเข้าหาแผ่น ขอบซ้ายใกล้กว่า ขอบขวาลึกเข้าไป (แบบ FIFA)
-     perspective สั้น (820px) ทำให้ระยะใกล้-ไกลต่างกันชัด แผ่นเลยดูมีมิติ ไม่แบน */
+  /* perspective สั้น (820px) ทำให้ระยะใกล้-ไกลต่างกันชัด แผ่นเลยดูมีมิติ ไม่แบน
+     translateX อยู่ก่อน rotate → แผ่นถูกเลื่อนออกนอกแกนกล้องจริง ๆ มุมมองเลยบิดตามตำแหน่ง */
   .wkPanel.show .wkShape{animation:wkTurn var(--turn,1.5s) cubic-bezier(.16,.84,.30,1) forwards}
   @keyframes wkTurn{
-    0%{transform:perspective(820px) rotateX(7deg) rotateZ(-1.4deg) rotateY(105deg) translateZ(70px);
-      opacity:0;filter:blur(8px)}
+    0%{transform:perspective(820px) translateX(var(--x0)) rotateX(7deg) rotateZ(-1.4deg)
+      rotateY(calc(var(--ry0) + 115deg)) translateZ(70px);opacity:0;filter:blur(8px)}
     22%{opacity:1;filter:blur(2px)}
-    100%{transform:perspective(820px) rotateX(7deg) rotateZ(-1.4deg) rotateY(15deg) translateZ(0);
-      opacity:1;filter:blur(0)}}
-  /* หมุนเข้าที่แล้วไม่แข็งค้าง — ลอยช้า ๆ ต่อไปเรื่อย ๆ เหมือนกล้องยังขยับอยู่
-     คีย์เฟรม 0% ตรงกับท่าจบของ wkTurn เป๊ะ ตอนสลับอนิเมชันเลยไม่กระตุก
-     (กฎนี้ต้องอยู่ "หลัง" กฎ wkTurn — ความจำเพาะเท่ากัน ตัวที่มาทีหลังชนะ) */
+    100%{transform:perspective(820px) translateX(var(--x0)) rotateX(7deg) rotateZ(-1.4deg)
+      rotateY(var(--ry0)) translateZ(0);opacity:1;filter:blur(0)}}
+  /* หมุนเข้าที่แล้วกล้องแพนเข้าหากลางจอช้า ๆ — 0% ตรงกับท่าจบของ wkTurn เป๊ะ เลยไม่กระตุก
+     (กฎพวกนี้ต้องอยู่ "หลัง" wkTurn — ความจำเพาะเท่ากัน ตัวที่มาทีหลังชนะ) */
+  .wkPanel.panning .wkShape{animation:wkGlide var(--glide,9s) cubic-bezier(.22,.68,.24,1) forwards}
+  @keyframes wkGlide{
+    0%{transform:perspective(820px) translateX(var(--x0)) rotateX(7deg) rotateZ(-1.4deg)
+      rotateY(var(--ry0)) translateZ(0)}
+    100%{transform:perspective(820px) translateX(0) rotateX(5deg) rotateZ(-.6deg)
+      rotateY(var(--ry1)) translateZ(0)}}
+  /* แพนถึงกลางจอแล้วยังไม่หยุดสนิท — ลอยเบา ๆ ต่อ เผื่อคนคุมงานถือค้างไว้นาน */
   .wkPanel.drift .wkShape{animation:wkDrift 7.5s ease-in-out infinite}
   @keyframes wkDrift{
-    0%,100%{transform:perspective(820px) rotateX(7deg) rotateZ(-1.4deg) rotateY(15deg)
-      translateZ(0) translateY(0)}
-    50%{transform:perspective(820px) rotateX(3.4deg) rotateZ(.5deg) rotateY(9deg)
-      translateZ(26px) translateY(-1.4%)}}
+    0%,100%{transform:perspective(820px) translateX(0) rotateX(5deg) rotateZ(-.6deg)
+      rotateY(var(--ry1)) translateZ(0) translateY(0)}
+    50%{transform:perspective(820px) translateX(1.2%) rotateX(3deg) rotateZ(.3deg)
+      rotateY(calc(var(--ry1) * .45)) translateZ(24px) translateY(-1.2%)}}
 
   /* แผ่นเป็นสี่เหลี่ยมผืนผ้าแนวนอน (3:2) ตาม ref ไม่ใช่จัตุรัสแล้ว */
   .wkShape{position:relative;width:min(86vw,105vh,880px);aspect-ratio:3/2;
@@ -453,6 +473,10 @@
     .wkSlot{width:29%;height:24%;margin-top:-12%;font-size:clamp(11px,3.4vw,18px)}
     #wkFigure{width:40vmin}
     .wkRing{width:170vmin;height:170vmin;margin:-85vmin 0 0 -85vmin}
+    /* จอแคบ: ย่อแผ่นลงนิด + เยื้องข้างน้อยลง ไม่งั้นตอนโผล่มาจะโดนขอบจอตัด */
+    .wkShape{width:min(76vw,105vh,880px)}
+    .wkPanel{--x0:10%;--ry0:-17deg;--ry1:-5deg}
+    .wkPanel.fromL{--x0:-10%;--ry0:17deg;--ry1:5deg}
   }
 
   /* ---------- ประตูต้อนรับ (GATE) ---------- */
@@ -2085,6 +2109,7 @@ const WK={
   wipe:760,       // แผ่นดำกวาดผ่านจอกี่ ms (ครึ่งทาง = จอมืดมิด = จังหวะสลับฉาก)
   p1:1400,        // เริ่มทรานซิชันแรก
   turn:1500,      // แผ่นป้ายหมุนเข้าที่ (90 องศา) กี่ ms
+  glide:9000,     // กล้องแพนจากข้างจอเข้าหากลางจอ (กดไปต่อได้ระหว่างแพน ไม่ต้องรอจบ)
   walk:3000,      // เงาพุ่งเข้าหากล้อง
   preCrest:500,   // เว้นจังหวะหลังเงาเดินถึง ก่อนแพนกล้องขึ้น
   pan:800,        // แพนกล้องขึ้นไปหาตราสังกัด
@@ -2148,7 +2173,7 @@ function startWalkout(){
   $('wkCam').classList.remove('hit','hitBig');
   $('wkFlash').classList.remove('pop');
   $('wkWipe').classList.remove('sweep');
-  ['wkPos','wkDept'].forEach(id=>$(id).classList.remove('show','drift'));
+  ['wkPos','wkDept'].forEach(id=>$(id).classList.remove('show','panning','drift','fromL'));
   $('wkSlotL').classList.remove('filled'); $('wkSlotR').classList.remove('filled');
   $('wkSlotL').classList.add('wait'); $('wkSlotR').classList.add('wait');
   $('wkSlotL').textContent='?'; $('wkSlotR').textContent='?';
@@ -2170,34 +2195,39 @@ function startWalkout(){
    สองสเต็ปแรกจบแล้ว "เปิดประตู" ค้างรอคลิก — ไม่มีตัวจับเวลามาไล่ ให้คนคุมงานกดเอง */
 function wkBeat(i){
   const w=$('walkout');
+  /* สลับโทนพื้นหลังตอนแผ่นดำบังจอ — คนดูจะเห็นว่า "ฉากเปลี่ยน" ไม่ใช่ป้ายเปลี่ยนเฉย ๆ */
+  const tone=t=>{ w.classList.remove('toneA','toneB','toneC'); w.classList.add(t); };
   if(i===0){
     wkCut(0,()=>{
-      $('wkPos').classList.add('show');
+      tone('toneA');
+      $('wkPos').classList.add('show');       // เข้าจากขวา (ค่าเริ่มต้น)
       $('wkSlotL').textContent=current.p||'—';
       $('wkSlotL').classList.remove('wait'); $('wkSlotL').classList.add('filled');
     },()=>{
       wkImpact(false);
       try{SFX.thump();SFX.blip(760,.14,'triangle',.28);}catch(e){}
     });
-    wkAt(WK.wipe*0.5+WK.turn,wkOpenGate);   // รอแผ่นหมุนเข้าที่ก่อนค่อยชวนให้กด
+    wkPanelGlide('wkPos');
     return;
   }
   if(i===1){
     wkCut(0,()=>{
-      $('wkPos').classList.remove('show','drift');
-      $('wkDept').classList.add('show');
+      tone('toneB');
+      $('wkPos').classList.remove('show','panning','drift');
+      $('wkDept').classList.add('fromL','show');   // จังหวะนี้เข้าจากซ้าย
       $('wkSlotR').textContent=current.c||'—';
       $('wkSlotR').classList.remove('wait'); $('wkSlotR').classList.add('filled');
     },()=>{
       wkImpact(false);
       try{SFX.thump();SFX.blip(940,.14,'triangle',.28);}catch(e){}
     });
-    wkAt(WK.wipe*0.5+WK.turn,wkOpenGate);
+    wkPanelGlide('wkDept');
     return;
   }
   // สเต็ปสุดท้าย — ตั้งแต่ตรงนี้วิ่งยาวจบเอง ไม่ต้องกดอีก
   wkCut(0,()=>{
-    $('wkDept').classList.remove('show','drift');
+    tone('toneC');
+    $('wkDept').classList.remove('show','panning','drift');
     w.classList.add('walk','spd3');
     try{SFX.charge(2.8);}catch(e){}
   });
@@ -2246,15 +2276,19 @@ function wkBlastToCard(t){
   wkAt(t+WK.blast,endWalkout);
 }
 
+/* ไล่จังหวะของแผ่นป้าย : หมุนเข้าที่ → กล้องแพนเข้าหากลางจอ → ลอยเบา ๆ ค้างไว้
+   เปิดให้กดได้ตั้งแต่แพนเสร็จ (ระหว่างแพนยังกดข้ามได้ด้วยปุ่ม "ข้าม") */
+function wkPanelGlide(id){
+  const t0=WK.wipe*0.5+WK.turn;
+  $(id).style.setProperty('--glide',WK.glide+'ms');
+  wkAt(t0,()=>{ $(id).classList.add('panning'); wkOpenGate(); });
+  wkAt(t0+WK.glide,()=>$(id).classList.add('drift'));
+}
+
 /* เปิดประตูรอคลิก / กดแล้วไปสเต็ปถัดไป */
 function wkOpenGate(){
   wkGate=true;
   $('walkout').classList.add('gate');
-  // แผ่นหมุนเข้าที่แล้ว — สลับไปอนิเมชันลอยช้า ๆ ระหว่างรอคนกด จะได้ไม่แข็งค้าง
-  ['wkPos','wkDept'].forEach(id=>{
-    const el=$(id);
-    if(el.classList.contains('show'))el.classList.add('drift');
-  });
 }
 function wkAdvance(){
   if(!wkGate)return;          // กดตอนกำลังเปลี่ยนฉากอยู่ = ไม่มีอะไรเกิดขึ้น กันกดรัว
