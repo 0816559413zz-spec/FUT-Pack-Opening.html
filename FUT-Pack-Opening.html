@@ -367,26 +367,38 @@
      #wkWorld (แสงปลายอุโมงค์จะทะลุขึ้นมาหน้าแผ่น) — ยก perspective ทั้งชุดไปไว้ที่ .wkShape แทน */
   .wkPanel{position:absolute;inset:0;display:none;place-items:center;z-index:5}
   .wkPanel.show{display:grid}
+  /* ท่าพัก: กล้องไม่ได้มองตรง ๆ — เฉียงเข้าหาแผ่น ขอบซ้ายใกล้กว่า ขอบขวาลึกเข้าไป (แบบ FIFA)
+     perspective สั้น (820px) ทำให้ระยะใกล้-ไกลต่างกันชัด แผ่นเลยดูมีมิติ ไม่แบน */
   .wkPanel.show .wkShape{animation:wkTurn var(--turn,1.5s) cubic-bezier(.16,.84,.30,1) forwards}
   @keyframes wkTurn{
-    0%{transform:perspective(1100px) rotateX(5deg) rotateZ(-1.2deg) rotateY(88deg) translateZ(60px);
+    0%{transform:perspective(820px) rotateX(7deg) rotateZ(-1.4deg) rotateY(105deg) translateZ(70px);
       opacity:0;filter:blur(8px)}
     22%{opacity:1;filter:blur(2px)}
-    100%{transform:perspective(1100px) rotateX(5deg) rotateZ(-1.2deg) rotateY(-2deg) translateZ(0);
+    100%{transform:perspective(820px) rotateX(7deg) rotateZ(-1.4deg) rotateY(15deg) translateZ(0);
       opacity:1;filter:blur(0)}}
+  /* หมุนเข้าที่แล้วไม่แข็งค้าง — ลอยช้า ๆ ต่อไปเรื่อย ๆ เหมือนกล้องยังขยับอยู่
+     คีย์เฟรม 0% ตรงกับท่าจบของ wkTurn เป๊ะ ตอนสลับอนิเมชันเลยไม่กระตุก
+     (กฎนี้ต้องอยู่ "หลัง" กฎ wkTurn — ความจำเพาะเท่ากัน ตัวที่มาทีหลังชนะ) */
+  .wkPanel.drift .wkShape{animation:wkDrift 7.5s ease-in-out infinite}
+  @keyframes wkDrift{
+    0%,100%{transform:perspective(820px) rotateX(7deg) rotateZ(-1.4deg) rotateY(15deg)
+      translateZ(0) translateY(0)}
+    50%{transform:perspective(820px) rotateX(3.4deg) rotateZ(.5deg) rotateY(9deg)
+      translateZ(26px) translateY(-1.4%)}}
 
-  .wkShape{position:relative;width:min(78vw,72vh,640px);aspect-ratio:1/1;
+  /* แผ่นเป็นสี่เหลี่ยมผืนผ้าแนวนอน (3:2) ตาม ref ไม่ใช่จัตุรัสแล้ว */
+  .wkShape{position:relative;width:min(86vw,105vh,880px);aspect-ratio:3/2;
     display:grid;place-items:center;
-    filter:drop-shadow(0 0 40px rgba(232,220,192,.55))}
+    filter:drop-shadow(0 0 44px rgba(232,220,192,.55))}
   .wkShape svg{position:absolute;inset:0;width:100%;height:100%}
   .wkLabel{position:relative;z-index:2;
     font-family:'Noto Sans Thai',sans-serif;font-weight:900;letter-spacing:0;
     color:#fdf8ea;text-shadow:0 4px 26px rgba(0,0,0,.9);text-align:center;
-    line-height:1.1;padding:0 14%;font-size:clamp(17px,4.6vw,46px)}
+    line-height:1.12;padding:0 13%;font-size:clamp(20px,5vw,58px)}
   /* ป้ายบอกว่ากำลังเฉลยช่องไหน — สองแผ่นหน้าตาเหมือนกันแล้ว ต้องมีตัวบอก */
-  .wkCap{position:absolute;z-index:2;top:23%;left:0;right:0;text-align:center;
+  .wkCap{position:absolute;z-index:2;top:16%;left:0;right:0;text-align:center;
     font-family:'Noto Sans Thai',sans-serif;font-weight:700;
-    font-size:clamp(10px,1.7vw,17px);letter-spacing:.22em;
+    font-size:clamp(10px,1.7vw,18px);letter-spacing:.22em;
     color:rgba(232,220,192,.72);text-shadow:0 2px 12px rgba(0,0,0,.9)}
 
   /* วาบขาวตอนกระแทก + ตอนเฉลยการ์ด */
@@ -617,12 +629,12 @@
       <!-- ป้ายเฉลยที่ 1 : ตำแหน่ง (แผ่นสี่เหลี่ยมมน โทนเย็น) -->
       <div class="wkPanel" id="wkPos">
         <div class="wkShape">
-          <svg viewBox="0 0 200 200" preserveAspectRatio="none" aria-hidden="true">
+          <svg viewBox="0 0 300 200" preserveAspectRatio="none" aria-hidden="true">
             <defs><linearGradient id="wkGrad1" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0" stop-color="#173a44"/><stop offset="1" stop-color="#08161d"/>
             </linearGradient></defs>
-            <rect x="22" y="22" width="156" height="156" rx="34" fill="url(#wkGrad1)"
-              stroke="#e8dcc0" stroke-width="9"/>
+            <rect x="13" y="13" width="274" height="174" rx="26" fill="url(#wkGrad1)"
+              stroke="#e8dcc0" stroke-width="8"/>
           </svg>
           <div class="wkCap">ตำแหน่ง</div>
           <div class="wkLabel" id="wkPosTxt"></div>
@@ -632,12 +644,12 @@
       <!-- ป้ายเฉลยที่ 2 : สังกัด (แผ่นเดียวกัน โทนน้ำเงิน) -->
       <div class="wkPanel" id="wkDept">
         <div class="wkShape">
-          <svg viewBox="0 0 200 200" preserveAspectRatio="none" aria-hidden="true">
+          <svg viewBox="0 0 300 200" preserveAspectRatio="none" aria-hidden="true">
             <defs><linearGradient id="wkGrad2" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0" stop-color="#22304d"/><stop offset="1" stop-color="#0b1220"/>
             </linearGradient></defs>
-            <rect x="22" y="22" width="156" height="156" rx="34" fill="url(#wkGrad2)"
-              stroke="#e8dcc0" stroke-width="9"/>
+            <rect x="13" y="13" width="274" height="174" rx="26" fill="url(#wkGrad2)"
+              stroke="#e8dcc0" stroke-width="8"/>
           </svg>
           <div class="wkCap">สังกัด</div>
           <div class="wkLabel" id="wkDeptTxt"></div>
@@ -2136,7 +2148,7 @@ function startWalkout(){
   $('wkCam').classList.remove('hit','hitBig');
   $('wkFlash').classList.remove('pop');
   $('wkWipe').classList.remove('sweep');
-  ['wkPos','wkDept'].forEach(id=>$(id).classList.remove('show'));
+  ['wkPos','wkDept'].forEach(id=>$(id).classList.remove('show','drift'));
   $('wkSlotL').classList.remove('filled'); $('wkSlotR').classList.remove('filled');
   $('wkSlotL').classList.add('wait'); $('wkSlotR').classList.add('wait');
   $('wkSlotL').textContent='?'; $('wkSlotR').textContent='?';
@@ -2172,7 +2184,7 @@ function wkBeat(i){
   }
   if(i===1){
     wkCut(0,()=>{
-      $('wkPos').classList.remove('show');
+      $('wkPos').classList.remove('show','drift');
       $('wkDept').classList.add('show');
       $('wkSlotR').textContent=current.c||'—';
       $('wkSlotR').classList.remove('wait'); $('wkSlotR').classList.add('filled');
@@ -2185,7 +2197,7 @@ function wkBeat(i){
   }
   // สเต็ปสุดท้าย — ตั้งแต่ตรงนี้วิ่งยาวจบเอง ไม่ต้องกดอีก
   wkCut(0,()=>{
-    $('wkDept').classList.remove('show');
+    $('wkDept').classList.remove('show','drift');
     w.classList.add('walk','spd3');
     try{SFX.charge(2.8);}catch(e){}
   });
@@ -2238,6 +2250,11 @@ function wkBlastToCard(t){
 function wkOpenGate(){
   wkGate=true;
   $('walkout').classList.add('gate');
+  // แผ่นหมุนเข้าที่แล้ว — สลับไปอนิเมชันลอยช้า ๆ ระหว่างรอคนกด จะได้ไม่แข็งค้าง
+  ['wkPos','wkDept'].forEach(id=>{
+    const el=$(id);
+    if(el.classList.contains('show'))el.classList.add('drift');
+  });
 }
 function wkAdvance(){
   if(!wkGate)return;          // กดตอนกำลังเปลี่ยนฉากอยู่ = ไม่มีอะไรเกิดขึ้น กันกดรัว
