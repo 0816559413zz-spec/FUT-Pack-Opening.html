@@ -737,6 +737,13 @@ const GATE_SFX_START=0;    // เริ่มเล่นที่วินา�
 const GATE_SFX_BGM=true;   // true = เล่นวนไม่มีกำหนดเป็นเพลงประกอบ | false = ค่อย ๆ หรี่ลงหลังประตูเปิดจบ
 let GATE_AUDIO=null;       // ตัวเล่นไฟล์ (ใช้ให้ปุ่มปิดเสียงคุมได้ด้วย)
 
+/* ---- เสียงตอนเฉลยการ์ด: SIUUUU แล้วต่อด้วยเพลง Don ------------------------
+   พอเฉลยเสร็จ (banner ขึ้น) หรี่/หยุด BGM ชั่วคราว → เล่น siuuuuuuu.mp3 → ต่อด้วย don.mp3
+   พอ don.mp3 จบ ค่อยเล่น Midnight Closet ต่อจากจุดเดิม (ไม่ใช่เริ่มใหม่) */
+const SIU_SFX_URL='siuuuuuuu.mp3';
+const DON_SFX_URL='don.mp3';
+let SIU_AUDIO=null, DON_AUDIO=null;
+
 /* หรี่เพลงพื้นหลังลงตอนกำลังสุ่ม/เฉลย แล้วค่อยดังกลับหลังเฉลยจบ (ไม่ใช่หยุดเล่นแล้วเริ่มใหม่) */
 let musicFadeTimer=null;
 function fadeMusicTo(vol,ms){
@@ -749,8 +756,51 @@ function fadeMusicTo(vol,ms){
     if(k>=1)clearInterval(musicFadeTimer);
   },40);
 }
-function duckMusic(){ fadeMusicTo(SOUND_ON?GATE_SFX_VOL*0.12:0, 300); }
+function duckMusic(){
+  fadeMusicTo(SOUND_ON?GATE_SFX_VOL*0.12:0, 300);
+  // เปิดซองใหม่ระหว่างที่ siuuuuuuu/don ยังค้างเล่นจากรอบก่อน — ตัดทิ้งทันทีเหมือนที่ทำกับ Midnight Closet
+  try{ if(SIU_AUDIO){ SIU_AUDIO.onended=null; SIU_AUDIO.pause(); } }catch(e){}
+  try{ if(DON_AUDIO){ DON_AUDIO.onended=null; DON_AUDIO.pause(); } }catch(e){}
+}
 function unduckMusic(){ fadeMusicTo(SOUND_ON?GATE_SFX_VOL:0, 500); }
+
+/* เฉลยเสร็จ → หรี่ Midnight Closet ลงเนียน ๆ (เหมือนตอนกดเปิดซอง) → SIUUUU → Don ต่อเลย
+   → จบแล้วค่อยหรี่เสียงกลับขึ้นแล้วเล่น Midnight Closet ต่อจากจุดเดิม (กันไฟล์เล่นไม่ได้ด้วย catch ทุกจุด) */
+function playRevealJingle(){
+  if(!SOUND_ON)return;
+  const resumeBgm=()=>{
+    try{
+      if(GATE_AUDIO&&SOUND_ON){
+        GATE_AUDIO.volume=0;
+        GATE_AUDIO.play().then(()=>fadeMusicTo(GATE_SFX_VOL,500)).catch(()=>{});
+      }
+    }catch(e){}
+  };
+  const playDon=()=>{
+    if(!DON_AUDIO){ resumeBgm(); return; }
+    try{
+      DON_AUDIO.currentTime=0; DON_AUDIO.volume=1;
+      DON_AUDIO.onended=resumeBgm;
+      DON_AUDIO.play().catch(resumeBgm);
+    }catch(e){ resumeBgm(); }
+  };
+  const startJingle=()=>{
+    try{ if(GATE_AUDIO)GATE_AUDIO.pause(); }catch(e){}
+    if(!SIU_AUDIO){ playDon(); return; }
+    try{
+      SIU_AUDIO.currentTime=0; SIU_AUDIO.volume=1;
+      SIU_AUDIO.onended=playDon;
+      SIU_AUDIO.play().catch(playDon);
+    }catch(e){ playDon(); }
+  };
+  if(musicFadeTimer){clearInterval(musicFadeTimer);musicFadeTimer=null;}
+  if(GATE_AUDIO&&!GATE_AUDIO.paused){
+    fadeMusicTo(0,260);            // หรี่ลงเนียน ๆ ก่อนตัด ให้เข้ากับจังหวะตอนกดเปิดซอง
+    setTimeout(startJingle,260);
+  }else{
+    startJingle();
+  }
+}
 
 /* ---------------------------------------------------------------- utils   */
 function hash32(s){let h=2166136261>>>0;s=String(s);for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h>>>0;}
@@ -1907,6 +1957,7 @@ function onRevealFront(){
   document.getElementById('bannerSub').textContent=R.th+' • '+current.r+' OVR';
   b.classList.remove('play');void b.offsetWidth;b.classList.add('play');
   addToCollection(current);
+  playRevealJingle();
 }
 
 function showCardUI(){
@@ -2187,6 +2238,8 @@ function bindUI(){
   $('btnSound').addEventListener('click',()=>{
     SFX.ensure();SFX.setOn(!SOUND_ON);
     if(GATE_AUDIO)GATE_AUDIO.volume=SOUND_ON?GATE_SFX_VOL:0;   // คุมไฟล์เสียงประตูด้วย
+    if(SIU_AUDIO)SIU_AUDIO.volume=SOUND_ON?1:0;
+    if(DON_AUDIO)DON_AUDIO.volume=SOUND_ON?1:0;
     $('btnSound').innerHTML=(SOUND_ON?'🔊':'🔇')+'<span class="lbl">เสียง</span>';
     if(SOUND_ON)SFX.blip(880,.1,'triangle',.2);
   });
@@ -2325,6 +2378,12 @@ function showGate(){
       GATE_AUDIO=new Audio(encodeURI(GATE_SFX_URL));
       GATE_AUDIO.preload='auto'; GATE_AUDIO.loop=GATE_SFX_BGM; GATE_AUDIO.load();
     }catch(e){ GATE_AUDIO=null; }
+  }
+  if(SIU_SFX_URL&&!SIU_AUDIO){
+    try{ SIU_AUDIO=new Audio(encodeURI(SIU_SFX_URL)); SIU_AUDIO.preload='auto'; SIU_AUDIO.load(); }catch(e){ SIU_AUDIO=null; }
+  }
+  if(DON_SFX_URL&&!DON_AUDIO){
+    try{ DON_AUDIO=new Audio(encodeURI(DON_SFX_URL)); DON_AUDIO.preload='auto'; DON_AUDIO.load(); }catch(e){ DON_AUDIO=null; }
   }
   // เอฟเฟกต์เสียงประตู (สังเคราะห์) — แยกอิสระจากเพลง เล่นทุกครั้งที่กดปุ่ม
   const doorSfx=()=>{ try{ SFX.charge(1.45); setTimeout(()=>SFX.burst(),1400); }catch(e){} };
