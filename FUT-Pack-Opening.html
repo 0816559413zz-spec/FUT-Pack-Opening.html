@@ -209,6 +209,13 @@
   #walkout.toneA{--tone:188;--rMul:1;--rSpin:0deg}      /* ตำแหน่ง : ฟ้าอมเขียว เส้นไหลตรง ๆ */
   #walkout.toneB{--tone:250;--rMul:-1.7;--rSpin:26deg}  /* สังกัด : ม่วงน้ำเงิน ลายบิดกลับทาง + หมุนตามตอนพุ่ง */
   #walkout.toneC{--tone:42;--rMul:2.6;--rSpin:-46deg}   /* คนเดินเข้า : ทอง บิดจัด หมุนสวนแรง */
+
+  /* กล้องแพนที่ตัวอุโมงค์ด้วย ให้ฉากหลังเลื่อนตามแบบพารัลแลกซ์
+     (วงแหวนอยู่กันคนละระยะลึก เลยเลื่อนไม่เท่ากัน = รู้สึกว่ากล้องเคลื่อนจริง) */
+  #walkout.camR{animation:wkCamR var(--glide,18s) cubic-bezier(.3,.66,.24,1) forwards}
+  #walkout.camL{animation:wkCamL var(--glide,18s) cubic-bezier(.3,.66,.24,1) forwards}
+  @keyframes wkCamR{from{perspective-origin:61% 47%}to{perspective-origin:50% 50%}}
+  @keyframes wkCamL{from{perspective-origin:39% 53%}to{perspective-origin:50% 50%}}
   #walkout.on{display:block;opacity:1}
   #walkout.out{opacity:0}
 
@@ -385,42 +392,43 @@
      .wkShape = ตัวแผ่น หมุนรอบแกน Y 90 องศาพอดีแล้วหยุดนิ่ง */
   /* .wkPanel ต้องไม่มี transform 3D ของตัวเอง ไม่งั้นมันจะไปเรียงสลับความลึกกับฉากใน
      #wkWorld (แสงปลายอุโมงค์จะทะลุขึ้นมาหน้าแผ่น) — ยก perspective ทั้งชุดไปไว้ที่ .wkShape แทน */
-  /* แผ่นไม่ได้จอดกลางจอนิ่ง ๆ — โผล่มาเยื้องข้างแล้วกล้องค่อยแพนเข้าหา (แบบ FIFA)
-     ทิศทางคุมด้วยตัวแปร จังหวะตำแหน่งเข้าจากขวา จังหวะสังกัดเข้าจากซ้าย
-     ใช้คีย์เฟรมชุดเดียวทั้งสองทาง แค่สลับค่าตัวแปร */
+  /* ---- แผ่นป้ายอยู่นิ่งกับที่ ตัวที่เคลื่อนคือ "กล้อง" -----------------------
+     perspective อยู่ที่ .wkPanel (เป็น property ไม่ใช่ transform function) แล้วขยับ
+     perspective-origin = ย้ายจุดที่กล้องมอง แผ่นเลยเปลี่ยนมุมมอง + เลื่อนตำแหน่งเอง
+     ตามหลักทัศนมิติจริง ๆ ไม่ใช่แผ่นไถลไปมา
+     แผ่นถูกดันไปข้างหลัง translateZ(-300px) เพราะของที่อยู่ระนาบ Z=0 พอดี
+     จะไม่ขยับเลยเวลากล้องแพน — ต้องมีระยะลึกก่อนถึงจะเกิดพารัลแลกซ์ */
   .wkPanel{position:absolute;inset:0;display:none;place-items:center;z-index:5;
-    --x0:19%;    /* จุดที่แผ่นโผล่มา (ขวา) */
-    --ry0:-25deg;/* มุมตอนโผล่ — กล้องมองจากอีกฝั่ง */
-    --ry1:-7deg} /* มุมตอนแพนถึงกลางจอ */
-  .wkPanel.fromL{--x0:-19%;--ry0:25deg;--ry1:7deg}
+    perspective:1000px;perspective-origin:var(--po0) 45%;
+    --po0:90%;      /* กล้องเริ่มมองจากทางขวา */
+    --ry0:-9deg}    /* แผ่นเอียงค้างไว้เท่านี้ ไม่ขยับอีกเลย */
+  .wkPanel.fromL{--po0:10%;--ry0:9deg}
   .wkPanel.show{display:grid}
-  /* perspective สั้น (820px) ทำให้ระยะใกล้-ไกลต่างกันชัด แผ่นเลยดูมีมิติ ไม่แบน
-     translateX อยู่ก่อน rotate → แผ่นถูกเลื่อนออกนอกแกนกล้องจริง ๆ มุมมองเลยบิดตามตำแหน่ง */
   .wkPanel.show .wkShape{animation:wkTurn var(--turn,1.5s) cubic-bezier(.16,.84,.30,1) forwards}
   @keyframes wkTurn{
-    0%{transform:perspective(820px) translateX(var(--x0)) rotateX(7deg) rotateZ(-1.4deg)
-      rotateY(calc(var(--ry0) + 115deg)) translateZ(70px);opacity:0;filter:blur(8px)}
+    0%{transform:translateZ(-520px) rotateX(6deg) rotateZ(-1.2deg)
+      rotateY(calc(var(--ry0) + 99deg));opacity:0;filter:blur(9px)}
     22%{opacity:1;filter:blur(2px)}
-    100%{transform:perspective(820px) translateX(var(--x0)) rotateX(7deg) rotateZ(-1.4deg)
-      rotateY(var(--ry0)) translateZ(0);opacity:1;filter:blur(0)}}
-  /* หมุนเข้าที่แล้วกล้องแพนเข้าหากลางจอช้า ๆ — 0% ตรงกับท่าจบของ wkTurn เป๊ะ เลยไม่กระตุก
-     (กฎพวกนี้ต้องอยู่ "หลัง" wkTurn — ความจำเพาะเท่ากัน ตัวที่มาทีหลังชนะ) */
-  .wkPanel.panning .wkShape{animation:wkGlide var(--glide,9s) cubic-bezier(.22,.68,.24,1) forwards}
-  @keyframes wkGlide{
-    0%{transform:perspective(820px) translateX(var(--x0)) rotateX(7deg) rotateZ(-1.4deg)
-      rotateY(var(--ry0)) translateZ(0)}
-    100%{transform:perspective(820px) translateX(0) rotateX(5deg) rotateZ(-.6deg)
-      rotateY(var(--ry1)) translateZ(0)}}
-  /* แพนถึงกลางจอแล้วยังไม่หยุดสนิท — ลอยเบา ๆ ต่อ เผื่อคนคุมงานถือค้างไว้นาน */
-  .wkPanel.drift .wkShape{animation:wkDrift 11s ease-in-out infinite}
-  @keyframes wkDrift{
-    0%,100%{transform:perspective(820px) translateX(0) rotateX(5deg) rotateZ(-.6deg)
-      rotateY(var(--ry1)) translateZ(0) translateY(0)}
-    50%{transform:perspective(820px) translateX(1.2%) rotateX(3deg) rotateZ(.3deg)
-      rotateY(calc(var(--ry1) * .45)) translateZ(24px) translateY(-1.2%)}}
+    100%{transform:translateZ(-300px) rotateX(6deg) rotateZ(-1.2deg)
+      rotateY(var(--ry0));opacity:1;filter:blur(0)}}
+  /* กล้องแพนจากข้างจอกลับมาตรงกลาง — ตัวแผ่นไม่มีอนิเมชันแล้ว ค้างท่าเดิมของมันไว้
+     (อนิเมชันอยู่ที่ .wkPanel ไม่ใช่ .wkShape นี่แหละคือความต่างของ "กล้องขยับ") */
+  .wkPanel.panning{animation:wkCamPan var(--glide,18s) cubic-bezier(.3,.66,.24,1) forwards}
+  @keyframes wkCamPan{
+    from{perspective-origin:var(--po0) 45%}
+    to{perspective-origin:50% 50%}}
+  /* แพนถึงกลางแล้วกล้องยังลอยเอื่อย ๆ ต่อ เผื่อคนคุมงานถือค้างไว้นาน
+     (0% ตรงกับปลายทางของ wkCamPan เป๊ะ ตอนสลับเลยไม่กระตุก
+      กฎนี้ต้องอยู่หลัง .panning — ความจำเพาะเท่ากัน ตัวหลังชนะ) */
+  .wkPanel.drift{animation:wkCamDrift 17s ease-in-out infinite}
+  @keyframes wkCamDrift{
+    0%,100%{perspective-origin:50% 50%}
+    50%{perspective-origin:43% 47%}}
 
   /* แผ่นเป็นสี่เหลี่ยมผืนผ้าแนวนอน (3:2) ตาม ref ไม่ใช่จัตุรัสแล้ว */
-  .wkShape{position:relative;width:min(86vw,105vh,880px);aspect-ratio:3/2;
+  /* แผ่นอยู่ลึกเข้าไป Z=-300 กับ perspective 1000 → ภาพที่เห็นจะเล็กลงราว 0.77 เท่า
+     เลยต้องตั้งขนาดเผื่อไว้ ~1.4 เท่า ภาพที่ออกมาถึงจะเต็มเฟรมเท่าเดิม */
+  .wkShape{position:relative;width:min(119vw,145vh,1215px);aspect-ratio:3/2;
     display:grid;place-items:center;
     filter:drop-shadow(0 0 44px rgba(232,220,192,.55))}
   .wkShape svg{position:absolute;inset:0;width:100%;height:100%}
@@ -486,10 +494,10 @@
     .wkSlot{width:29%;height:24%;margin-top:-12%;font-size:clamp(11px,3.4vw,18px)}
     #wkFigure{width:40vmin}
     .wkRing{width:170vmin;height:170vmin;margin:-85vmin 0 0 -85vmin}
-    /* จอแคบ: ย่อแผ่นลงนิด + เยื้องข้างน้อยลง ไม่งั้นตอนโผล่มาจะโดนขอบจอตัด */
-    .wkShape{width:min(76vw,105vh,880px)}
-    .wkPanel{--x0:10%;--ry0:-17deg;--ry1:-5deg}
-    .wkPanel.fromL{--x0:-10%;--ry0:17deg;--ry1:5deg}
+    /* จอแคบ: ย่อแผ่นลง + กล้องเยื้องน้อยลง ไม่งั้นตอนกล้องอยู่ข้างจะเห็นแผ่นโดนขอบจอตัด */
+    .wkShape{width:min(105vw,145vh,1215px)}
+    .wkPanel{--po0:76%;--ry0:-6deg}
+    .wkPanel.fromL{--po0:24%;--ry0:6deg}
   }
 
   /* ---------- ประตูต้อนรับ (GATE) ---------- */
@@ -2122,7 +2130,7 @@ const WK={
   wipe:950,       // แผ่นดำกวาดผ่านจอกี่ ms (ครึ่งทาง = จอมืดมิด = จังหวะสลับฉาก)
   p1:1800,        // เริ่มทรานซิชันแรก
   turn:2100,      // แผ่นป้ายหมุนเข้าที่ (90 องศา) กี่ ms
-  glide:13000,    // กล้องแพนจากข้างจอเข้าหากลางจอ (กดไปต่อได้ระหว่างแพน ไม่ต้องรอจบ)
+  glide:18000,    // กล้องแพนจากข้างจอเข้าหากลางจอ (กดไปต่อได้ระหว่างแพน ไม่ต้องรอจบ)
   walk:3800,      // เงาพุ่งเข้าหากล้อง
   preCrest:750,   // เว้นจังหวะหลังเงาเดินถึง ก่อนแพนกล้องขึ้น
   pan:1100,       // แพนกล้องขึ้นไปหาตราสังกัด
@@ -2184,6 +2192,7 @@ function startWalkout(){
   w.className='';
   w.style.setProperty('--turn',WK.turn+'ms');
   w.style.setProperty('--walk',WK.walk+'ms');
+  w.style.setProperty('--glide',WK.glide+'ms');   // ตกทอดถึงทั้งชั้นป้ายและชั้นอุโมงค์
   $('wkCam').classList.remove('hit','hitBig');
   $('wkFlash').classList.remove('pop');
   $('wkWipe').classList.remove('sweep');
@@ -2221,7 +2230,7 @@ function wkBeat(i){
       wkImpact(false);
       try{SFX.thump();SFX.blip(760,.14,'triangle',.28);}catch(e){}
     });
-    wkPanelGlide('wkPos');
+    wkPanelGlide('wkPos','camR');
     return;
   }
   if(i===1){
@@ -2235,13 +2244,15 @@ function wkBeat(i){
       wkImpact(false);
       try{SFX.thump();SFX.blip(940,.14,'triangle',.28);}catch(e){}
     });
-    wkPanelGlide('wkDept');
+    wkPanelGlide('wkDept','camL');
     return;
   }
   // สเต็ปสุดท้าย — ตั้งแต่ตรงนี้วิ่งยาวจบเอง ไม่ต้องกดอีก
   wkCut(0,()=>{
     tone('toneC');
     $('wkDept').classList.remove('show','panning','drift');
+    // ปิดกล้องแพนของช่วงป้ายก่อน ไม่งั้นมันจะค้างวิ่งทับช่วงแพนขึ้นไปหาตราสังกัด
+    w.classList.remove('camR','camL');
     w.classList.add('walk','spd3');
     try{SFX.charge(2.8);}catch(e){}
   });
@@ -2292,10 +2303,14 @@ function wkBlastToCard(t){
 
 /* ไล่จังหวะของแผ่นป้าย : หมุนเข้าที่ → กล้องแพนเข้าหากลางจอ → ลอยเบา ๆ ค้างไว้
    เปิดให้กดได้ตั้งแต่แพนเสร็จ (ระหว่างแพนยังกดข้ามได้ด้วยปุ่ม "ข้าม") */
-function wkPanelGlide(id){
-  const t0=WK.wipe*0.5+WK.turn;
-  $(id).style.setProperty('--glide',WK.glide+'ms');
-  wkAt(t0,()=>{ $(id).classList.add('panning'); wkOpenGate(); });
+function wkPanelGlide(id,camClass){
+  const t0=WK.wipe*0.5+WK.turn, w=$('walkout');
+  wkAt(t0,()=>{
+    // กล้องเริ่มแพน พร้อมกันทั้งชั้นป้ายและชั้นอุโมงค์ จะได้เป็นการเคลื่อนกล้องครั้งเดียว
+    $(id).classList.add('panning');
+    w.classList.remove('camR','camL'); void w.offsetWidth; w.classList.add(camClass);
+    wkOpenGate();
+  });
   wkAt(t0+WK.glide,()=>$(id).classList.add('drift'));
 }
 
