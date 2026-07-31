@@ -323,24 +323,38 @@
     25%{transform:scaleX(.82);opacity:.28}50%{transform:scaleX(1);opacity:.45}
     75%{transform:scaleX(.82);opacity:.28}}
 
-  /* จังหวะเงียบมืดก่อนเงาโผล่ — เพิ่มความลุ้น */
-  #wkDim{position:absolute;inset:0;z-index:4;background:#000;opacity:0;pointer-events:none;
-    transition:opacity .35s ease}
-  #walkout.hush #wkDim{opacity:.88}
+  /* ---- ทรานซิชันตัดฉาก : แผ่นดำกวาดผ่านจอ (สไตล์ FIFA) --------------------
+     กว้าง 200% + เอียง 14° เพื่อให้ตอนอยู่กลางจอมันบังมิดจริง ๆ
+     ระหว่างที่บังมิด โค้ดจะสลับสิ่งที่อยู่ข้างหลังทิ้งไว้ พอแผ่นผ่านไปก็เห็นของใหม่ */
+  #wkWipe{position:absolute;top:-30%;left:-50%;width:200%;height:160%;z-index:7;
+    pointer-events:none;opacity:0;will-change:transform;
+    transform:translateX(-100%) skewX(-14deg);
+    background:linear-gradient(90deg,rgba(2,4,10,0) 0,#010308 7%,#010308 93%,rgba(2,4,10,0) 100%)}
+  #wkWipe::before,#wkWipe::after{content:'';position:absolute;top:-10%;height:120%;width:4px;
+    background:linear-gradient(180deg,transparent,rgba(244,208,63,.95) 22%,rgba(255,240,190,1) 50%,rgba(244,208,63,.95) 78%,transparent);
+    box-shadow:0 0 34px rgba(244,208,63,.85),0 0 90px rgba(244,208,63,.4)}
+  #wkWipe::before{left:6.5%}
+  #wkWipe::after{right:6.5%}
+  /* ระยะเวลาคุมจาก JS ผ่าน --wipe จะได้ไม่หลุดคีย์กับจังหวะสลับเนื้อหา
+     ช่วง 42–58% จงใจให้แผ่นเกือบหยุดกลางจอ = มีหน้าต่างมืดมิดกว้างพอ (~200ms)
+     ให้สลับฉากได้ปลอดภัย ไม่แวบให้เห็นตอนกำลังสลับ */
+  #wkWipe.sweep{animation:wkWipe var(--wipe,.76s) linear forwards}
+  @keyframes wkWipe{
+    0%{transform:translateX(-100%) skewX(-14deg);opacity:1;
+      animation-timing-function:cubic-bezier(.42,0,.75,.6)}
+    42%{transform:translateX(-2.5%) skewX(-14deg);animation-timing-function:linear}
+    58%{transform:translateX(2.5%) skewX(-14deg);
+      animation-timing-function:cubic-bezier(.25,.4,.58,1)}
+    100%{transform:translateX(100%) skewX(-14deg);opacity:1}}
 
-  /* ป้ายเฉลย — พุ่งจากไกล กระแทก เด้ง ค้าง แล้วผ่านหัวไป */
+  /* ป้ายเฉลย — โผล่ตอนจอโดนแผ่นดำบังอยู่ แล้วค่อย ๆ เข้าที่พอแผ่นผ่านไป */
   .wkPanel{position:absolute;inset:0;display:none;place-items:center;z-index:5;
     transform-style:preserve-3d}
-  .wkPanel.go{display:grid;animation:wkSlam 2.4s cubic-bezier(.16,.86,.28,1) forwards}
-  @keyframes wkSlam{
-    0%{transform:translateZ(-2400px) rotateY(78deg) rotateZ(-16deg);opacity:0;filter:blur(10px)}
-    16%{opacity:1;filter:blur(2px)}
-    26%{transform:translateZ(150px) rotateY(-10deg) rotateZ(4deg);filter:blur(0)}
-    33%{transform:translateZ(-40px) rotateY(4deg) rotateZ(-1.5deg)}
-    40%{transform:translateZ(0) rotateY(0) rotateZ(0)}
-    /* ค้างให้อ่านทัน ~0.9 วิ */
-    78%{transform:translateZ(0) rotateY(0) rotateZ(0);opacity:1}
-    100%{transform:translateZ(950px) rotateY(0) rotateZ(3deg);opacity:0;filter:blur(4px)}}
+  .wkPanel.show{display:grid;animation:wkPanelIn .62s cubic-bezier(.14,.86,.24,1) forwards}
+  @keyframes wkPanelIn{
+    0%{transform:scale(1.16) translateZ(0);opacity:0;filter:blur(7px)}
+    45%{opacity:1}
+    100%{transform:scale(1) translateZ(0);opacity:1;filter:blur(0)}}
 
   .wkShape{position:relative;width:min(74vw,560px);aspect-ratio:1/1;
     display:grid;place-items:center;
@@ -360,7 +374,7 @@
   #walkout.blast #wkFlash{animation:wkBlast .5s ease forwards}
   @keyframes wkBlast{0%{opacity:0}60%{opacity:1}100%{opacity:1}}
 
-  #wkSkip{position:absolute;right:16px;bottom:16px;z-index:7;opacity:.55}
+  #wkSkip{position:absolute;right:16px;bottom:16px;z-index:9;opacity:.55}
   #wkSkip:hover{opacity:1}
 
   @media(max-width:640px){
@@ -558,15 +572,15 @@
       </div>
     </div><!-- /#wkCam -->
 
-    <div id="wkDim"></div>
     <div id="wkFlash"></div>
+    <div id="wkWipe"></div>
     <button class="btn sm" id="wkSkip">ข้าม ⏭</button>
   </div>
 
   <div class="hud" id="topbar">
     <div class="brand">
       <div class="mark">U</div>
-      <div><b>ULTIMATE DRAW</b><small>PACK OPENING</small></div>
+      <div><b>STM Package</b><small>PACK OPENING</small></div>
     </div>
     <span class="btn" id="remainBox" title="คนที่ยังไม่ถูกสุ่ม / ทั้งหมด" style="cursor:default">
       👥<span class="lbl">เหลือ</span> <b id="remainCount" style="color:var(--gold)">0 / 0</b></span>
@@ -673,10 +687,10 @@
     <div class="whiteout"></div>
     <div class="inner">
       <div class="kicker">Gacha Zone</div>
-      <div class="title">ULTIMATE DRAW</div>
+      <div class="title">Package Players STM</div>
       <div class="rule"></div>
       <div class="welcome">ยินดีต้อนรับเข้าสู่กาชา</div>
-      <div class="desc">เปิดซองสุ่มการ์ดตัวละคร ลุ้นระดับความหายาก<br>ตั้งแต่ SILVER จนถึงระดับตำนาน</div>
+      <div class="desc">เปิดซองสุ่มการ์ดตัวละคร นักเตะจาก STM<br>ตั้งแต่ SILVER จนถึงระดับตำนาน</div>
       <button class="btn gold" id="btnEnter">เข้าสู่กาชา</button>
       <div class="tip">แตะปุ่มเพื่อเปิดประตู</div>
     </div>
@@ -899,42 +913,45 @@ function cardPath(ctx,w,h,inset){
   ctx.closePath();
 }
 
-/* ---- ตราสังกัด / ธงธีม สร้างจากชื่อ ---- */
-function drawCrest(ctx,cx,cy,size,seedStr,ink){
-  const rnd=mulberry(hash32(seedStr)), s=size;
-  const hue=Math.floor(rnd()*360), hue2=(hue+60+Math.floor(rnd()*120))%360;
-  ctx.save();ctx.translate(cx,cy);
-  ctx.beginPath();
-  ctx.moveTo(-s/2,-s/2);ctx.lineTo(s/2,-s/2);ctx.lineTo(s/2,s*0.12);
-  ctx.quadraticCurveTo(s/2,s*0.42,0,s/2);ctx.quadraticCurveTo(-s/2,s*0.42,-s/2,s*0.12);
-  ctx.closePath();
-  const g=ctx.createLinearGradient(-s/2,-s/2,s/2,s/2);
-  g.addColorStop(0,'hsl('+hue+',65%,52%)');g.addColorStop(1,'hsl('+hue2+',60%,32%)');
-  ctx.fillStyle=g;ctx.fill();
-  ctx.save();ctx.clip();
-  ctx.globalAlpha=.35;ctx.fillStyle='#fff';
-  const mode=Math.floor(rnd()*3);
-  if(mode===0){for(let i=-3;i<4;i+=2)ctx.fillRect(i*s*0.16,-s,s*0.16,s*2);}
-  else if(mode===1){ctx.beginPath();ctx.moveTo(-s,-s*0.1);ctx.lineTo(s,-s*0.45);ctx.lineTo(s,s*0.1);ctx.lineTo(-s,s*0.45);ctx.closePath();ctx.fill();}
-  else{ctx.beginPath();ctx.arc(0,-s*0.05,s*0.28,0,7);ctx.fill();}
-  ctx.restore();
-  ctx.lineWidth=Math.max(2,s*0.05);ctx.strokeStyle='rgba(255,255,255,.75)';ctx.stroke();
-  ctx.fillStyle='#fff';ctx.font=TK(s*0.52,700);ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=s*0.18;
-  ctx.fillText(String(seedStr).replace(/[^A-Za-zก-๙]/g,'').slice(0,2).toUpperCase()||'★',0,-s*0.02);
-  ctx.restore();
+/* ---- โลโก้ STM (ใช้แทนธง/ตราสังกัดแบบสุ่มของเดิม) ------------------------
+   วางไฟล์โลโก้ไว้ที่ pic/ แล้วแก้ชื่อไฟล์ตรงนี้ได้เลย
+   ถ้าหาไฟล์ไม่เจอ การ์ดจะวาดต่อได้ตามปกติ แค่ไม่มีโลโก้ */
+const STM_LOGO_SRC='pic/STM_Logo-removebg-preview.png';
+let STM_LOGO=null;
+function loadStmLogo(){
+  return new Promise(res=>{
+    const im=new Image();
+    im.onload=()=>{ STM_LOGO=canUseImage(im)?im:null; res(); };
+    im.onerror=()=>res();
+    im.src=STM_LOGO_SRC;
+  });
 }
-function drawFlag(ctx,cx,cy,w,seedStr){
-  const rnd=mulberry(hash32('flag'+seedStr)), h=w*0.66;
-  const hues=[Math.floor(rnd()*360),Math.floor(rnd()*360),Math.floor(rnd()*360)];
-  ctx.save();ctx.translate(cx-w/2,cy-h/2);
-  const vert=rnd()>.5;
-  for(let i=0;i<3;i++){
-    ctx.fillStyle='hsl('+hues[i]+',62%,'+(38+i*10)+'%)';
-    if(vert)ctx.fillRect(i*w/3,0,w/3+1,h); else ctx.fillRect(0,i*h/3,w,h/3+1);
+/* เปิดไฟล์ตรง ๆ ด้วย file:// เบราว์เซอร์จะถือว่ารูปข้ามโดเมน → canvas โดน "taint"
+   แล้ว toDataURL (รูปย่อในคลัง) กับเท็กซ์เจอร์ของ Three.js จะพังทั้งใบ
+   เลยทดสอบก่อนว่าเอารูปมาใช้ได้จริงไหม ถ้าไม่ได้ก็ข้ามโลโก้ไป การ์ดยังออกครบ */
+function canUseImage(im){
+  try{
+    const t=newCanvas(2,2);
+    t.getContext('2d').drawImage(im,0,0,2,2);
+    t.toDataURL();
+    return true;
+  }catch(e){ return false; }
+}
+function drawLogo(ctx,cx,cy,w,glow){
+  const im=STM_LOGO;
+  if(!im||!im.width)return false;
+  const h=w*(im.height/im.width);
+  ctx.save();
+  if(glow!==false){
+    // แสงนวลหลังโลโก้ ให้เห็นชัดทั้งการ์ดพื้นสว่างและพื้นเข้ม
+    const g=ctx.createRadialGradient(cx,cy,w*0.06,cx,cy,w*0.62);
+    g.addColorStop(0,'rgba(255,255,255,.55)');g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,w*0.62,0,7);ctx.fill();
+    ctx.shadowColor='rgba(0,0,0,.35)';ctx.shadowBlur=w*0.10;ctx.shadowOffsetY=w*0.025;
   }
-  ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=Math.max(1.5,w*0.028);ctx.strokeRect(0,0,w,h);
+  ctx.drawImage(im,cx-w/2,cy-h/2,w,h);
   ctx.restore();
+  return true;
 }
 
 /* ---- รูปที่อัปโหลด: แคชเป็น Image element ต่อ data URL กันโหลดซ้ำ/กระตุกตอนวาดการ์ด ---- */
@@ -1028,7 +1045,7 @@ function drawPortrait(ctx,x,y,w,h,ch,R){
     roundRectPath(ctx,fx,fy,fw,fh,fr);ctx.stroke();
     ctx.restore();
   }else{
-    // ซิลูเอตต์ตัวดำเฉย ๆ (ไม่มีรูป — ไม่ใส่ตัวอักษรย่อ)
+    // ซิลูเอตต์ตัวดำเฉย ๆ (ไม่มีรูป — ไม่วาดอักษรย่อ/ชื่อทับรูปแล้ว ชื่อมีอยู่ใต้รูปช่องเดียวพอ)
     const bodyG=ctx.createLinearGradient(cx,base-sh,cx,base);
     bodyG.addColorStop(0,'rgba(12,16,28,.96)');bodyG.addColorStop(1,'rgba(4,6,12,.6)');
     ctx.fillStyle=bodyG;
@@ -1082,26 +1099,47 @@ function renderCardFront(ch,scale){
   /* ภาพตัวละคร */
   drawPortrait(ctx,CW*0.30,CH*0.045,CW*0.66,CH*0.515,ch,R);
 
-  /* บล็อกซ้าย : เรตติ้ง / ตำแหน่ง / ธง / ตรา */
+  /* บล็อกซ้าย : เรตติ้ง / โลโก้ STM / ตำแหน่ง / แผนก */
+  const LX=CW*0.176;                    // แกนกลางของคอลัมน์ซ้าย
   ctx.textAlign='center';
   ctx.fillStyle=R.ink;
   ctx.font=TK(196,700);ctx.textBaseline='alphabetic';
   ctx.save();ctx.shadowColor='rgba(0,0,0,.28)';ctx.shadowBlur=14;ctx.shadowOffsetY=5;
-  ctx.fillText(String(ch.r),CW*0.176,CH*0.183);ctx.restore();
-  // ตำแหน่งอาจเป็นข้อความไทยยาว ๆ (เช่น 'หัวหน้าทีม') — ย่อขนาดฟอนต์ให้พอดีช่อง ไม่ให้ล้นทับรูป
-  {
-    const maxW=CW*0.20;
-    let fs=78;
-    ctx.font=TH(fs,700);
-    while(ctx.measureText(ch.p).width>maxW&&fs>16){ fs-=2; ctx.font=TH(fs,700); }
-    ctx.fillText(ch.p,CW*0.176,CH*0.245);
-  }
+  ctx.fillText(String(ch.r),LX,CH*0.183);ctx.restore();
 
   ctx.strokeStyle=R.line;ctx.lineWidth=4;
-  ctx.beginPath();ctx.moveTo(CW*0.085,CH*0.268);ctx.lineTo(CW*0.268,CH*0.268);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(CW*0.085,CH*0.214);ctx.lineTo(CW*0.268,CH*0.214);ctx.stroke();
 
-  drawFlag(ctx,CW*0.176,CH*0.318,CW*0.135,ch.t);
-  drawCrest(ctx,CW*0.176,CH*0.412,CW*0.145,ch.c,R.ink);
+  drawLogo(ctx,LX,CH*0.288,CW*0.215);
+
+  ctx.strokeStyle=R.line;ctx.lineWidth=4;
+  ctx.beginPath();ctx.moveTo(CW*0.085,CH*0.356);ctx.lineTo(CW*0.268,CH*0.356);ctx.stroke();
+
+  /* ตำแหน่ง + แผนก — ข้อความไทยยาว ๆ (เช่น 'ผู้จัดการฝ่ายปฏิบัติการ') ย่อฟอนต์ก่อน
+     ถ้ายังไม่พอค่อยตัดเป็น 2 บรรทัด จะได้ไม่ล้นไปทับรูป */
+  ctx.textBaseline='middle';ctx.fillStyle=R.ink;
+  const LMAXW=CW*0.215;
+  const fitSideLabel=txt=>{
+    let fs=62; ctx.font=TH(fs,700);
+    while(fs>34&&ctx.measureText(txt).width>LMAXW){ fs-=2; ctx.font=TH(fs,700); }
+    if(ctx.measureText(txt).width<=LMAXW)return{fs:fs,lines:[txt]};
+    let cut=txt.lastIndexOf(' ',Math.ceil(txt.length/2));
+    if(cut<2)cut=Math.ceil(txt.length/2);
+    const a=txt.slice(0,cut).trim(), b=txt.slice(cut).trim();
+    while(fs>16&&(ctx.measureText(a).width>LMAXW||ctx.measureText(b).width>LMAXW)){ fs-=2; ctx.font=TH(fs,700); }
+    return{fs:fs,lines:[a,b]};
+  };
+  {
+    // ช่องไหนเว้นว่างก็ข้ามไป ไม่เว้นรูโหว่ไว้ แล้วจัดทุกบรรทัดกึ่งกลางช่องระหว่างเส้นคั่นกับชื่อ
+    const blocks=[ch.p,ch.c].filter(Boolean).map(fitSideLabel), gap=CH*0.016;
+    const totalH=blocks.reduce((s,b)=>s+b.lines.length*b.fs*1.2,0)+gap*(blocks.length-1);
+    let y=CH*0.455-totalH/2;
+    blocks.forEach((b,i)=>{
+      ctx.font=TH(b.fs,700);
+      b.lines.forEach(t=>{ y+=b.fs*0.6; ctx.fillText(t,LX,y); y+=b.fs*0.6; });
+      if(i<blocks.length-1)y+=gap;
+    });
+  }
 
   /* เส้นคั่น + ชื่อ */
   const nameY=CH*0.616;
@@ -1132,13 +1170,16 @@ function renderCardFront(ch,scale){
   ctx.strokeStyle=R.line;ctx.lineWidth=3;
   ctx.beginPath();ctx.moveTo(CW*0.5,CH*0.684);ctx.lineTo(CW*0.5,CH*0.872);ctx.stroke();
 
-  /* ป้ายสังกัด/ธีมล่างสุด */
-  ctx.textAlign='center';ctx.globalAlpha=.7;ctx.fillStyle=R.ink;
-  let bs=32, bt=(ch.c+'  •  '+ch.t).toUpperCase();
-  ctx.font=TK(bs,500);
-  while(ctx.measureText(bt).width>CW*0.36&&bs>14){bs-=2;ctx.font=TK(bs,500);}
-  ctx.fillText(bt,CW*0.5,CH*0.910);
-  ctx.globalAlpha=1;
+  /* ป้ายแผนก/ธีมล่างสุด — ช่องที่เว้นว่างข้ามไป จะได้ไม่มีจุดคั่นค้าง */
+  const bt=[ch.c,ch.t].filter(Boolean).join('  •  ').toUpperCase();
+  if(bt){
+    ctx.textAlign='center';ctx.globalAlpha=.7;ctx.fillStyle=R.ink;
+    let bs=32;
+    ctx.font=TK(bs,500);
+    while(ctx.measureText(bt).width>CW*0.36&&bs>14){bs-=2;ctx.font=TK(bs,500);}
+    ctx.fillText(bt,CW*0.5,CH*0.910);
+    ctx.globalAlpha=1;
+  }
 
   /* ตราระดับหายากมุมขวาบน */
   if(R.key==='icon'||R.key==='hero'){
@@ -1182,8 +1223,11 @@ function renderCardBack(){
   bg.addColorStop(0,'#fdf1b8');bg.addColorStop(.55,'#c9a227');bg.addColorStop(1,'#7a5a10');
   ctx.fillStyle=bg;ctx.fill();
   ctx.lineWidth=12;ctx.strokeStyle='rgba(255,255,255,.5)';ctx.stroke();
-  ctx.fillStyle='#1a1405';ctx.font=TK(210,700);ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText('U',0,10);
+  // โลโก้ STM กลางตรากลม (ถ้าโหลดรูปไม่ได้ ใช้ตัว U แบบเดิมแทน)
+  if(!drawLogo(ctx,0,6,CW*0.36,false)){
+    ctx.fillStyle='#1a1405';ctx.font=TK(210,700);ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('U',0,10);
+  }
   ctx.restore();
   ctx.fillStyle='rgba(244,208,63,.85)';ctx.textAlign='center';ctx.font=TK(64,600);
   ctx.fillText('ULTIMATE DRAW',CW/2,CH*0.75);
@@ -1217,8 +1261,12 @@ function renderPackArt(){
   bg.addColorStop(0,'#fff6cf');bg.addColorStop(.5,'#f4d03f');bg.addColorStop(1,'#8a6a1e');
   ctx.fillStyle=bg;ctx.fill();
   ctx.lineWidth=10;ctx.strokeStyle='rgba(255,255,255,.65)';ctx.stroke();
-  ctx.fillStyle='#1a1405';ctx.font=TK(180,700);ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText('U',0,8);ctx.restore();
+  // โลโก้ STM กลางตราหกเหลี่ยม (ถ้าโหลดรูปไม่ได้ ใช้ตัว U แบบเดิมแทน)
+  if(!drawLogo(ctx,0,4,W*0.42,false)){
+    ctx.fillStyle='#1a1405';ctx.font=TK(180,700);ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('U',0,8);
+  }
+  ctx.restore();
   // ข้อความ
   ctx.textAlign='center';
   ctx.fillStyle='#ffe9a8';ctx.shadowColor='rgba(244,208,63,.7)';ctx.shadowBlur=28;
@@ -1683,6 +1731,20 @@ const SFX={
     f.frequency.setValueAtTime(900,t);f.frequency.exponentialRampToValueAtTime(3600,t+0.3);
     n.connect(f);this.env(f,t,0.02,0.32,0.3);n.start(t);n.stop(t+0.5);
   },
+  /* เสียงลมกวาดผ่านจอ — ใช้คู่กับแผ่นดำตอนตัดฉาก (เสียงวิ่งจากแหลมลงต่ำแบบสวบ) */
+  whoosh(){
+    const c=this.ensure();if(!c)return;const t=c.currentTime;
+    const n=this.noiseSrc();
+    const f=c.createBiquadFilter();f.type='bandpass';f.Q.value=0.9;
+    f.frequency.setValueAtTime(320,t);
+    f.frequency.exponentialRampToValueAtTime(4200,t+0.22);
+    f.frequency.exponentialRampToValueAtTime(280,t+0.62);
+    n.connect(f);
+    const g=c.createGain();g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.5,t+0.16);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.7);
+    f.connect(g);g.connect(this.master);n.start(t);n.stop(t+0.8);
+  },
   /* เสียง "ฟุบ" เบสหนักแบบตอนป้ายเฉลยกระแทกจอ (สไตล์ EA) */
   thump(){
     const c=this.ensure();if(!c)return;const t=c.currentTime;
@@ -1859,12 +1921,10 @@ function applyCardTexture(ch){
 /* ---------------------------------------------------------------- walkout */
 /* จังหวะแต่ละช่วง (มิลลิวินาที) — ปรับได้ตามใจ */
 const WK={
-  spdUp:1200,     // เริ่มเร่งความเร็วอุโมงค์
-  p1:2200,        // ป้ายที่ 1 พุ่งออกมา
-  impact:960,     // ป้ายกระแทกหยุดหลังพุ่งออกมากี่ ms (ตรงกับคีย์เฟรม 40% ของ 2.4s)
-  gap:2800,       // ระยะห่างระหว่างป้าย 1 → 2 (ต้อง > panel เพื่อไม่ให้ป้ายซ้อนกัน)
-  panel:2400,     // ความยาวอนิเมชันป้าย
-  hush:600,       // จังหวะมืดเงียบก่อนเงาโผล่ (ตัวเรียกความลุ้น)
+  spdUp:1000,     // เริ่มเร่งความเร็วอุโมงค์
+  wipe:760,       // แผ่นดำกวาดผ่านจอกี่ ms (ครึ่งทาง = จอมืดมิด = จังหวะสลับฉาก)
+  p1:1500,        // เริ่มทรานซิชันแรก
+  hold:1900,      // ค้างให้อ่านป้ายแต่ละอันก่อนกวาดไปฉากถัดไป
   walk:3000,      // เงาพุ่งเข้าหากล้อง
   blast:520
 };
@@ -1872,6 +1932,21 @@ let wkTimers=[], wkDone=false;
 
 function wkClear(){ wkTimers.forEach(clearTimeout); wkTimers=[]; }
 function wkAt(ms,fn){ wkTimers.push(setTimeout(fn,ms)); }
+
+/* กวาดแผ่นดำผ่านจอ 1 ครั้ง — ต้องถอดคลาส + reflow ก่อน ไม่งั้นรอบสองไม่เล่นซ้ำ */
+function wkWipeGo(){
+  const el=$('wkWipe');
+  el.style.setProperty('--wipe',WK.wipe+'ms');
+  el.classList.remove('sweep'); void el.offsetWidth; el.classList.add('sweep');
+  try{ SFX.whoosh(); }catch(e){}
+}
+/* ทรานซิชัน 1 จังหวะ: กวาดแผ่นดำ → พอบังมิดค่อยสลับฉากข้างหลัง → พอแผ่นพ้นจอค่อยกระแทก
+   (กระแทกต้องรอให้แผ่นพ้นจอก่อน ไม่งั้นแสงวาบจะโดนแผ่นดำบังไปครึ่งจอ) */
+function wkCut(t,swap,hit){
+  wkAt(t,wkWipeGo);
+  wkAt(t+WK.wipe*0.5,swap);
+  if(hit)wkAt(t+WK.wipe*0.96,hit);
+}
 
 /* วงแหวนอุโมงค์ — สร้างครั้งเดียวพอ */
 function wkBuildRings(){
@@ -1905,7 +1980,8 @@ function startWalkout(){
   w.className='';
   $('wkCam').classList.remove('hit','hitBig');
   $('wkFlash').classList.remove('pop');
-  ['wkPos','wkDept'].forEach(id=>$(id).classList.remove('go'));
+  $('wkWipe').classList.remove('sweep');
+  ['wkPos','wkDept'].forEach(id=>$(id).classList.remove('show'));
   $('wkSlotL').classList.remove('filled'); $('wkSlotR').classList.remove('filled');
   $('wkSlotL').classList.add('wait'); $('wkSlotR').classList.add('wait');
   $('wkSlotL').textContent='?'; $('wkSlotR').textContent='?';
@@ -1919,41 +1995,39 @@ function startWalkout(){
   // เร่งความเร็วอุโมงค์
   wkAt(WK.spdUp,()=>w.classList.add('spd2'));
 
-  // 1) ป้ายตำแหน่ง — พุ่ง → กระแทก → ค้าง → ผ่านหัวไป
-  wkAt(WK.p1,()=>{ $('wkPos').classList.add('go'); try{SFX.flip();}catch(e){} });
-  wkAt(WK.p1+WK.impact,()=>{
-    wkImpact(false);
+  // 1) ตัดฉากเข้าป้ายตำแหน่ง
+  const t1=WK.p1;
+  wkCut(t1,()=>{
+    $('wkPos').classList.add('show');
     $('wkSlotL').textContent=current.p||'—'; $('wkSlotL').classList.remove('wait'); $('wkSlotL').classList.add('filled');
+  },()=>{
+    wkImpact(false);
     try{SFX.thump();SFX.blip(760,.14,'triangle',.28);}catch(e){}
   });
-  // เก็บป้ายที่ 1 ให้พ้นจอก่อน ป้ายที่ 2 ถึงจะมา (ให้เห็นทีละอันจริง ๆ)
-  wkAt(WK.p1+WK.panel,()=>$('wkPos').classList.remove('go'));
 
-  // 2) ป้ายแผนก
-  const t2=WK.p1+WK.gap;
-  wkAt(t2,()=>{ $('wkDept').classList.add('go'); try{SFX.flip();}catch(e){} });
-  wkAt(t2+WK.impact,()=>{
-    wkImpact(false);
+  // 2) ตัดฉากจากป้ายตำแหน่ง → ป้ายแผนก (สลับตอนจอมืด จะได้ไม่เห็นป้ายซ้อนกัน)
+  const t2=t1+WK.wipe+WK.hold;
+  wkCut(t2,()=>{
+    $('wkPos').classList.remove('show');
+    $('wkDept').classList.add('show');
     $('wkSlotR').textContent=current.c||'—'; $('wkSlotR').classList.remove('wait'); $('wkSlotR').classList.add('filled');
+  },()=>{
+    wkImpact(false);
     try{SFX.thump();SFX.blip(940,.14,'triangle',.28);}catch(e){}
   });
-  wkAt(t2+WK.panel,()=>$('wkDept').classList.remove('go'));
 
-  // 3) จังหวะมืดเงียบ — หยุดหายใจก่อนเฉลยคน
-  const tHush=t2+WK.panel;
-  wkAt(tHush,()=>w.classList.add('hush'));
-
-  // 4) เงาโผล่จากปลายอุโมงค์แล้วพุ่งเข้าหากล้อง + อุโมงค์เร่งสุด
-  const tWalk=tHush+WK.hush;
-  wkAt(tWalk,()=>{
-    w.classList.remove('hush');
+  // 3) ตัดฉากจากป้ายแผนก → อุโมงค์เปล่า แล้วเงาโผล่พุ่งเข้าหากล้อง (อุโมงค์เร่งสุด)
+  const t3=t2+WK.wipe+WK.hold;
+  const tWalk=t3+WK.wipe*0.5;
+  wkCut(t3,()=>{
+    $('wkDept').classList.remove('show');
     w.classList.add('walk','spd3');
     try{SFX.charge(2.8);}catch(e){}
   });
   wkAt(tWalk+WK.walk*0.45,()=>{ shake=Math.max(shake,.6); });
   wkAt(tWalk+WK.walk*0.8,()=>{ shake=Math.max(shake,1); });
 
-  // 5) วาบขาว แล้วส่งต่อให้การ์ด
+  // 4) วาบขาว แล้วส่งต่อให้การ์ด
   const tBlast=tWalk+WK.walk;
   wkAt(tBlast,()=>{ w.classList.add('blast'); wkImpact(true); try{SFX.burst();}catch(e){} });
   wkAt(tBlast+WK.blast,endWalkout);
@@ -2604,6 +2678,7 @@ async function boot(){
   try{ if(document.fonts&&document.fonts.load){
     await Promise.all([document.fonts.load('700 100px Teko'),document.fonts.load('900 100px "Noto Sans Thai"')]);
   }}catch(e){}
+  try{ await loadStmLogo(); }catch(e){}   // โหลดโลโก้ก่อนวาดการ์ดใบแรก
   ROSTER=ROSTER.map(c=>normChar(c));
   preloadRosterImages();
   initThree();
