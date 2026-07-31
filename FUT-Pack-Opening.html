@@ -204,10 +204,11 @@
     perspective:700px;perspective-origin:50% 50%;
     --crestUp:86vh;   /* ระยะที่ตราสังกัดจอดอยู่เหนือเฟรม = ระยะที่กล้องต้องแพนขึ้นพอดี */
     --tone:210}       /* สีอุโมงค์ (วงแหวน/แสงปลายทาง/เส้นความเร็ว/หมอก) */
-  /* เปลี่ยนโทนพื้นหลังทุกครั้งที่ตัดฉาก — สลับตอนแผ่นดำบังจอ เลยไม่เห็นรอยต่อ */
-  #walkout.toneA{--tone:188}   /* จังหวะตำแหน่ง : ฟ้าอมเขียว */
-  #walkout.toneB{--tone:250}   /* จังหวะสังกัด  : น้ำเงินอมม่วง */
-  #walkout.toneC{--tone:42}    /* จังหวะคนเดินเข้า : ทอง — ไล่เข้าหาสีการ์ด */
+  /* เปลี่ยนพื้นหลังทุกครั้งที่ตัดฉาก — ทั้งสีและ "ท่าวิ่งของเส้น" ไม่ให้ซ้ำกันสักจังหวะ
+     สลับตอนแผ่นดำบังจอ เลยไม่เห็นรอยต่อ */
+  #walkout.toneA{--tone:188;--rMul:1;--rSpin:0deg}      /* ตำแหน่ง : ฟ้าอมเขียว เส้นไหลตรง ๆ */
+  #walkout.toneB{--tone:250;--rMul:-1.7;--rSpin:26deg}  /* สังกัด : ม่วงน้ำเงิน ลายบิดกลับทาง + หมุนตามตอนพุ่ง */
+  #walkout.toneC{--tone:42;--rMul:2.6;--rSpin:-46deg}   /* คนเดินเข้า : ทอง บิดจัด หมุนสวนแรง */
   #walkout.on{display:block;opacity:1}
   #walkout.out{opacity:0}
 
@@ -242,16 +243,27 @@
       inset 0 0 70px hsla(var(--tone),75%,55%,.16);
     opacity:0;will-change:transform,opacity;
     animation:wkRush var(--dur,3s) linear infinite var(--d,0s)}
+  /* --rMul บิดลายอุโมงค์ / --rSpin ทำให้วงแหวนค่อย ๆ หมุนระหว่างพุ่งเข้าหากล้อง
+     สองตัวนี้เปลี่ยนต่อจังหวะ เส้นเลยวิ่งไม่เหมือนกันสักครั้ง */
   @keyframes wkRush{
-    0%{transform:translateZ(-3200px) rotate(var(--r,0deg));opacity:0}
+    0%{transform:translateZ(-3200px) rotate(calc(var(--r,0deg) * var(--rMul,1)));opacity:0}
     10%{opacity:.18}
     72%{opacity:.9}
     93%{opacity:.45}
-    100%{transform:translateZ(680px) rotate(var(--r,0deg));opacity:0}}
+    100%{transform:translateZ(680px)
+      rotate(calc(var(--r,0deg) * var(--rMul,1) + var(--rSpin,0deg)));opacity:0}}
   /* เร่งความเร็วเป็นช่วง ๆ ให้รู้สึกว่ากำลังพุ่งแรงขึ้น */
-  #walkout.spd2 .wkRing{animation-duration:calc(var(--dur,3s) * .6)}
-  #walkout.spd3 .wkRing{animation-duration:calc(var(--dur,3s) * .3);
+  #walkout.spd2 .wkRing{animation-duration:calc(var(--dur,3s) * .78)}
+  #walkout.spd3 .wkRing{animation-duration:calc(var(--dur,3s) * .42);
     border-color:hsla(var(--tone),100%,80%,.8)}
+  /* จังหวะละท่า : ความเร็ว + ความมนของวง + ทิศหมุนของเส้นความเร็ว ไล่แรงขึ้นเรื่อย ๆ
+     (กฎพวกนี้อยู่หลัง spd2/spd3 ความจำเพาะเท่ากัน ตัวหลังเลยชนะ) */
+  #walkout.toneA .wkRing{animation-duration:calc(var(--dur,3s) * .72);border-radius:30px}
+  #walkout.toneB .wkRing{animation-duration:calc(var(--dur,3s) * .56);border-radius:120px}
+  #walkout.toneC .wkRing{animation-duration:calc(var(--dur,3s) * .34);border-radius:6px}
+  #walkout.toneA #wkStreak{animation-duration:11s}
+  #walkout.toneB #wkStreak{animation-duration:6s;animation-direction:reverse}
+  #walkout.toneC #wkStreak{animation-duration:3.4s}
 
   /* แสงปลายอุโมงค์ */
   #wkCore{position:absolute;left:50%;top:50%;width:24vmin;height:24vmin;
@@ -302,7 +314,8 @@
     transform:translate(-50%,0) translateZ(-2000px);opacity:0}
   #wkFigure svg{width:100%;height:auto;display:block;
     filter:drop-shadow(0 0 26px rgba(120,180,255,.55))}
-  #walkout.walk #wkFigure{animation:wkWalk 3s cubic-bezier(.55,0,.85,.65) forwards}
+  /* ความยาวต้องตรงกับ WK.walk ฝั่ง JS — JS เป็นคนตั้ง --walk ให้ */
+  #walkout.walk #wkFigure{animation:wkWalk var(--walk,3s) cubic-bezier(.55,0,.85,.65) forwards}
   @keyframes wkWalk{
     0%{transform:translate(-50%,0) translateZ(-2000px);opacity:0;filter:blur(5px)}
     18%{opacity:.5}
@@ -399,7 +412,7 @@
     100%{transform:perspective(820px) translateX(0) rotateX(5deg) rotateZ(-.6deg)
       rotateY(var(--ry1)) translateZ(0)}}
   /* แพนถึงกลางจอแล้วยังไม่หยุดสนิท — ลอยเบา ๆ ต่อ เผื่อคนคุมงานถือค้างไว้นาน */
-  .wkPanel.drift .wkShape{animation:wkDrift 7.5s ease-in-out infinite}
+  .wkPanel.drift .wkShape{animation:wkDrift 11s ease-in-out infinite}
   @keyframes wkDrift{
     0%,100%{transform:perspective(820px) translateX(0) rotateX(5deg) rotateZ(-.6deg)
       rotateY(var(--ry1)) translateZ(0) translateY(0)}
@@ -414,11 +427,11 @@
   .wkLabel{position:relative;z-index:2;
     font-family:'Noto Sans Thai',sans-serif;font-weight:900;letter-spacing:0;
     color:#fdf8ea;text-shadow:0 4px 26px rgba(0,0,0,.9);text-align:center;
-    line-height:1.12;padding:0 13%;font-size:clamp(20px,5vw,58px)}
+    line-height:1.1;padding:0 10%;font-size:clamp(26px,7vw,96px)}
   /* ป้ายบอกว่ากำลังเฉลยช่องไหน — สองแผ่นหน้าตาเหมือนกันแล้ว ต้องมีตัวบอก */
-  .wkCap{position:absolute;z-index:2;top:16%;left:0;right:0;text-align:center;
+  .wkCap{position:absolute;z-index:2;top:15%;left:0;right:0;text-align:center;
     font-family:'Noto Sans Thai',sans-serif;font-weight:700;
-    font-size:clamp(10px,1.7vw,18px);letter-spacing:.22em;
+    font-size:clamp(11px,2vw,22px);letter-spacing:.22em;
     color:rgba(232,220,192,.72);text-shadow:0 2px 12px rgba(0,0,0,.9)}
 
   /* วาบขาวตอนกระแทก + ตอนเฉลยการ์ด */
@@ -2105,17 +2118,17 @@ function applyCardTexture(ch){
 /* ---------------------------------------------------------------- walkout */
 /* จังหวะแต่ละช่วง (มิลลิวินาที) — ปรับได้ตามใจ */
 const WK={
-  spdUp:1000,     // เริ่มเร่งความเร็วอุโมงค์
-  wipe:760,       // แผ่นดำกวาดผ่านจอกี่ ms (ครึ่งทาง = จอมืดมิด = จังหวะสลับฉาก)
-  p1:1400,        // เริ่มทรานซิชันแรก
-  turn:1500,      // แผ่นป้ายหมุนเข้าที่ (90 องศา) กี่ ms
-  glide:9000,     // กล้องแพนจากข้างจอเข้าหากลางจอ (กดไปต่อได้ระหว่างแพน ไม่ต้องรอจบ)
-  walk:3000,      // เงาพุ่งเข้าหากล้อง
-  preCrest:500,   // เว้นจังหวะหลังเงาเดินถึง ก่อนแพนกล้องขึ้น
-  pan:800,        // แพนกล้องขึ้นไปหาตราสังกัด
-  crestHold:1400, // ค้างดูตราสังกัด
-  pan2:700,       // แพนต่อไปหาการ์ด
-  blast:520
+  spdUp:1200,     // เริ่มเร่งความเร็วอุโมงค์
+  wipe:950,       // แผ่นดำกวาดผ่านจอกี่ ms (ครึ่งทาง = จอมืดมิด = จังหวะสลับฉาก)
+  p1:1800,        // เริ่มทรานซิชันแรก
+  turn:2100,      // แผ่นป้ายหมุนเข้าที่ (90 องศา) กี่ ms
+  glide:13000,    // กล้องแพนจากข้างจอเข้าหากลางจอ (กดไปต่อได้ระหว่างแพน ไม่ต้องรอจบ)
+  walk:3800,      // เงาพุ่งเข้าหากล้อง
+  preCrest:750,   // เว้นจังหวะหลังเงาเดินถึง ก่อนแพนกล้องขึ้น
+  pan:1100,       // แพนกล้องขึ้นไปหาตราสังกัด
+  crestHold:2200, // ค้างดูตราสังกัด
+  pan2:950,       // แพนต่อไปหาการ์ด
+  blast:620
 };
 let wkTimers=[], wkDone=false;
 let wkStep=0, wkGate=false;
@@ -2170,6 +2183,7 @@ function startWalkout(){
   // รีเซ็ตทุกอย่างให้เล่นใหม่ได้ (ต้อง reflow ก่อน ไม่งั้น animation ไม่รีสตาร์ท)
   w.className='';
   w.style.setProperty('--turn',WK.turn+'ms');
+  w.style.setProperty('--walk',WK.walk+'ms');
   $('wkCam').classList.remove('hit','hitBig');
   $('wkFlash').classList.remove('pop');
   $('wkWipe').classList.remove('sweep');
