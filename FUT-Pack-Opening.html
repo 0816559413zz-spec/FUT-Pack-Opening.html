@@ -157,6 +157,8 @@
   .inp:focus{border-color:rgba(244,208,63,.7);background:rgba(0,0,0,.55)}
   select.inp{cursor:pointer}
   select.inp option{background:#0b1020}
+  /* ยังไม่ได้เลือกสังกัด — บังคับกรอก เลยทำกรอบแดงให้เห็นว่าตกหล่นตรงไหน */
+  .inp.need{border-color:rgba(255,107,107,.75);background:rgba(70,12,12,.35)}
   .rchip{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:900;letter-spacing:1px;white-space:nowrap}
   .photoCell{display:flex;align-items:center;gap:6px}
   .photoLbl{width:40px;height:40px;border-radius:8px;overflow:hidden;background:rgba(0,0,0,.35);
@@ -199,12 +201,36 @@
   /* ---------- WALKOUT : อุโมงค์ 3D จริง + ป้ายกระแทก ---------- */
   #walkout{position:absolute;inset:0;z-index:14;display:none;overflow:hidden;
     background:#02040a;opacity:0;transition:opacity .4s ease;
-    perspective:700px;perspective-origin:50% 50%}
+    perspective:700px;perspective-origin:50% 50%;
+    --crestUp:86vh;   /* ระยะที่ตราสังกัดจอดอยู่เหนือเฟรม = ระยะที่กล้องต้องแพนขึ้นพอดี */
+    --tone:210}       /* สีอุโมงค์ (วงแหวน/แสงปลายทาง/เส้นความเร็ว/หมอก) */
+  /* เปลี่ยนพื้นหลังทุกครั้งที่ตัดฉาก — ทั้งสีและ "ท่าวิ่งของเส้น" ไม่ให้ซ้ำกันสักจังหวะ
+     สลับตอนแผ่นดำบังจอ เลยไม่เห็นรอยต่อ */
+  #walkout.toneA{--tone:188;--rMul:1;--rSpin:0deg}      /* ตำแหน่ง : ฟ้าอมเขียว เส้นไหลตรง ๆ */
+  #walkout.toneB{--tone:250;--rMul:-1.7;--rSpin:26deg}  /* สังกัด : ม่วงน้ำเงิน ลายบิดกลับทาง + หมุนตามตอนพุ่ง */
+  #walkout.toneC{--tone:42;--rMul:2.6;--rSpin:-46deg}   /* คนเดินเข้า : ทอง บิดจัด หมุนสวนแรง */
+
+  /* กล้องแพนที่ตัวอุโมงค์ด้วย ให้ฉากหลังเลื่อนตามแบบพารัลแลกซ์
+     (วงแหวนอยู่กันคนละระยะลึก เลยเลื่อนไม่เท่ากัน = รู้สึกว่ากล้องเคลื่อนจริง) */
+  #walkout.camR{animation:wkCamR var(--glide,18s) cubic-bezier(.3,.66,.24,1) forwards}
+  #walkout.camL{animation:wkCamL var(--glide,18s) cubic-bezier(.3,.66,.24,1) forwards}
+  @keyframes wkCamR{from{perspective-origin:61% 47%}to{perspective-origin:50% 50%}}
+  @keyframes wkCamL{from{perspective-origin:39% 53%}to{perspective-origin:50% 50%}}
   #walkout.on{display:block;opacity:1}
   #walkout.out{opacity:0}
 
   /* กล้อง — ตัวนี้คือตัวที่สั่นตอนกระแทก */
   #wkCam{position:absolute;inset:0;transform-style:preserve-3d}
+  /* ชั้นฉาก — ตัวนี้คือตัวที่ "แพน" ขึ้นไปหาตราสังกัด (แยกจากตัวสั่น จะได้ไม่แย่งทรานส์ฟอร์มกัน) */
+  #wkWorld{position:absolute;inset:0;transform-style:preserve-3d;will-change:transform}
+  #walkout.pan1 #wkWorld{animation:wkPan1 var(--pan,.8s) cubic-bezier(.32,.72,.24,1) forwards}
+  #walkout.pan2 #wkWorld{animation:wkPan2 var(--pan2,.7s) cubic-bezier(.5,0,.75,.4) forwards}
+  /* แพนขึ้น = ดันฉากลง ตราที่จอดไว้เหนือเฟรมจะเลื่อนเข้ามาพอดีกลางจอ
+     ระยะจอดตรา กับ ระยะแพน ใช้ตัวแปรตัวเดียวกัน (--crestUp) มันจะได้หักล้างกันพอดีทุกขนาดจอ */
+  @keyframes wkPan1{from{transform:translateY(0)}to{transform:translateY(var(--crestUp))}}
+  /* แพนต่อ + ดันเข้าหาแสง ส่งไม้ต่อให้ฉากการ์ด */
+  @keyframes wkPan2{from{transform:translateY(var(--crestUp)) scale(1)}
+    to{transform:translateY(calc(var(--crestUp) * .45)) scale(1.5)}}
   @keyframes wkHit{
     0%{transform:translate3d(0,0,0)}
     12%{transform:translate3d(-1.4%,1%,0) rotate(-.5deg)}
@@ -219,25 +245,38 @@
   #wkRings{position:absolute;inset:0;transform-style:preserve-3d}
   .wkRing{position:absolute;left:50%;top:50%;
     width:130vmin;height:130vmin;margin:-65vmin 0 0 -65vmin;
-    border:2px solid rgba(104,164,255,.55);border-radius:30px;
-    box-shadow:0 0 46px rgba(80,140,255,.3),inset 0 0 70px rgba(60,110,220,.16);
+    border:2px solid hsla(var(--tone),100%,70%,.55);border-radius:30px;
+    box-shadow:0 0 46px hsla(var(--tone),100%,66%,.3),
+      inset 0 0 70px hsla(var(--tone),75%,55%,.16);
     opacity:0;will-change:transform,opacity;
     animation:wkRush var(--dur,3s) linear infinite var(--d,0s)}
+  /* --rMul บิดลายอุโมงค์ / --rSpin ทำให้วงแหวนค่อย ๆ หมุนระหว่างพุ่งเข้าหากล้อง
+     สองตัวนี้เปลี่ยนต่อจังหวะ เส้นเลยวิ่งไม่เหมือนกันสักครั้ง */
   @keyframes wkRush{
-    0%{transform:translateZ(-3200px) rotate(var(--r,0deg));opacity:0}
+    0%{transform:translateZ(-3200px) rotate(calc(var(--r,0deg) * var(--rMul,1)));opacity:0}
     10%{opacity:.18}
     72%{opacity:.9}
     93%{opacity:.45}
-    100%{transform:translateZ(680px) rotate(var(--r,0deg));opacity:0}}
+    100%{transform:translateZ(680px)
+      rotate(calc(var(--r,0deg) * var(--rMul,1) + var(--rSpin,0deg)));opacity:0}}
   /* เร่งความเร็วเป็นช่วง ๆ ให้รู้สึกว่ากำลังพุ่งแรงขึ้น */
-  #walkout.spd2 .wkRing{animation-duration:calc(var(--dur,3s) * .6)}
-  #walkout.spd3 .wkRing{animation-duration:calc(var(--dur,3s) * .3);
-    border-color:rgba(150,200,255,.8)}
+  #walkout.spd2 .wkRing{animation-duration:calc(var(--dur,3s) * .78)}
+  #walkout.spd3 .wkRing{animation-duration:calc(var(--dur,3s) * .42);
+    border-color:hsla(var(--tone),100%,80%,.8)}
+  /* จังหวะละท่า : ความเร็ว + ความมนของวง + ทิศหมุนของเส้นความเร็ว ไล่แรงขึ้นเรื่อย ๆ
+     (กฎพวกนี้อยู่หลัง spd2/spd3 ความจำเพาะเท่ากัน ตัวหลังเลยชนะ) */
+  #walkout.toneA .wkRing{animation-duration:calc(var(--dur,3s) * .72);border-radius:30px}
+  #walkout.toneB .wkRing{animation-duration:calc(var(--dur,3s) * .56);border-radius:120px}
+  #walkout.toneC .wkRing{animation-duration:calc(var(--dur,3s) * .34);border-radius:6px}
+  #walkout.toneA #wkStreak{animation-duration:11s}
+  #walkout.toneB #wkStreak{animation-duration:6s;animation-direction:reverse}
+  #walkout.toneC #wkStreak{animation-duration:3.4s}
 
   /* แสงปลายอุโมงค์ */
   #wkCore{position:absolute;left:50%;top:50%;width:24vmin;height:24vmin;
     margin:-12vmin 0 0 -12vmin;border-radius:50%;filter:blur(8px);
-    background:radial-gradient(circle,#e6f3ff,#66a8ff 32%,rgba(40,90,200,.28) 62%,transparent 76%);
+    background:radial-gradient(circle,#eaf5ff,hsl(var(--tone),100%,70%) 32%,
+      hsla(var(--tone),70%,47%,.28) 62%,transparent 76%);
     animation:wkCore 2.1s ease-in-out infinite}
   @keyframes wkCore{0%,100%{transform:scale(.8);opacity:.5}50%{transform:scale(1.2);opacity:.95}}
   #walkout.spd3 #wkCore{animation-duration:.6s}
@@ -245,7 +284,7 @@
   /* เส้นความเร็วพุ่งออกจากกลางจอ */
   #wkStreak{position:absolute;inset:-45%;opacity:0;transition:opacity .5s ease;
     background:repeating-conic-gradient(from 0deg at 50% 50%,
-      transparent 0deg 1.6deg,rgba(170,210,255,.6) 1.6deg 2deg,transparent 2deg 6deg);
+      transparent 0deg 1.6deg,hsla(var(--tone),100%,83%,.6) 1.6deg 2deg,transparent 2deg 6deg);
     -webkit-mask-image:radial-gradient(circle at 50% 50%,transparent 10%,#000 40%,transparent 78%);
     mask-image:radial-gradient(circle at 50% 50%,transparent 10%,#000 40%,transparent 78%);
     animation:wkSpin 7s linear infinite}
@@ -255,7 +294,7 @@
 
   /* หมอกที่พื้น */
   #wkFog{position:absolute;left:-10%;right:-10%;bottom:-6%;height:42%;pointer-events:none;
-    background:radial-gradient(ellipse at 50% 100%,rgba(150,190,255,.22),transparent 68%);
+    background:radial-gradient(ellipse at 50% 100%,hsla(var(--tone),85%,78%,.22),transparent 68%);
     filter:blur(16px)}
 
   /* แผ่นป้ายสองข้างผนัง (ที่ว่างรอเฉลย) */
@@ -282,7 +321,8 @@
     transform:translate(-50%,0) translateZ(-2000px);opacity:0}
   #wkFigure svg{width:100%;height:auto;display:block;
     filter:drop-shadow(0 0 26px rgba(120,180,255,.55))}
-  #walkout.walk #wkFigure{animation:wkWalk 3s cubic-bezier(.55,0,.85,.65) forwards}
+  /* ความยาวต้องตรงกับ WK.walk ฝั่ง JS — JS เป็นคนตั้ง --walk ให้ */
+  #walkout.walk #wkFigure{animation:wkWalk var(--walk,3s) cubic-bezier(.55,0,.85,.65) forwards}
   @keyframes wkWalk{
     0%{transform:translate(-50%,0) translateZ(-2000px);opacity:0;filter:blur(5px)}
     18%{opacity:.5}
@@ -347,25 +387,60 @@
       animation-timing-function:cubic-bezier(.25,.4,.58,1)}
     100%{transform:translateX(100%) skewX(-14deg);opacity:1}}
 
-  /* ป้ายเฉลย — โผล่ตอนจอโดนแผ่นดำบังอยู่ แล้วค่อย ๆ เข้าที่พอแผ่นผ่านไป */
+  /* ป้ายเฉลย — โผล่ตอนจอโดนแผ่นดำบังอยู่ แล้วหมุนเข้าที่พอแผ่นผ่านไป
+     .wkPanel = "กล้อง" เอียงค้าง ทำให้แผ่นดูตั้งอยู่ในอุโมงค์จริง ๆ ไม่ใช่แปะทับจอ
+     .wkShape = ตัวแผ่น หมุนรอบแกน Y 90 องศาพอดีแล้วหยุดนิ่ง */
+  /* .wkPanel ต้องไม่มี transform 3D ของตัวเอง ไม่งั้นมันจะไปเรียงสลับความลึกกับฉากใน
+     #wkWorld (แสงปลายอุโมงค์จะทะลุขึ้นมาหน้าแผ่น) — ยก perspective ทั้งชุดไปไว้ที่ .wkShape แทน */
+  /* ---- แผ่นป้ายอยู่นิ่งกับที่ ตัวที่เคลื่อนคือ "กล้อง" -----------------------
+     perspective อยู่ที่ .wkPanel (เป็น property ไม่ใช่ transform function) แล้วขยับ
+     perspective-origin = ย้ายจุดที่กล้องมอง แผ่นเลยเปลี่ยนมุมมอง + เลื่อนตำแหน่งเอง
+     ตามหลักทัศนมิติจริง ๆ ไม่ใช่แผ่นไถลไปมา
+     แผ่นถูกดันไปข้างหลัง translateZ(-300px) เพราะของที่อยู่ระนาบ Z=0 พอดี
+     จะไม่ขยับเลยเวลากล้องแพน — ต้องมีระยะลึกก่อนถึงจะเกิดพารัลแลกซ์ */
   .wkPanel{position:absolute;inset:0;display:none;place-items:center;z-index:5;
-    transform-style:preserve-3d}
-  .wkPanel.show{display:grid;animation:wkPanelIn .62s cubic-bezier(.14,.86,.24,1) forwards}
-  @keyframes wkPanelIn{
-    0%{transform:scale(1.16) translateZ(0);opacity:0;filter:blur(7px)}
-    45%{opacity:1}
-    100%{transform:scale(1) translateZ(0);opacity:1;filter:blur(0)}}
+    perspective:1000px;perspective-origin:var(--po0) 45%;
+    --po0:90%;      /* กล้องเริ่มมองจากทางขวา */
+    --ry0:-9deg}    /* แผ่นเอียงค้างไว้เท่านี้ ไม่ขยับอีกเลย */
+  .wkPanel.fromL{--po0:10%;--ry0:9deg}
+  .wkPanel.show{display:grid}
+  .wkPanel.show .wkShape{animation:wkTurn var(--turn,1.5s) cubic-bezier(.16,.84,.30,1) forwards}
+  @keyframes wkTurn{
+    0%{transform:translateZ(-520px) rotateX(6deg) rotateZ(-1.2deg)
+      rotateY(calc(var(--ry0) + 99deg));opacity:0;filter:blur(9px)}
+    22%{opacity:1;filter:blur(2px)}
+    100%{transform:translateZ(-300px) rotateX(6deg) rotateZ(-1.2deg)
+      rotateY(var(--ry0));opacity:1;filter:blur(0)}}
+  /* กล้องแพนจากข้างจอกลับมาตรงกลาง — ตัวแผ่นไม่มีอนิเมชันแล้ว ค้างท่าเดิมของมันไว้
+     (อนิเมชันอยู่ที่ .wkPanel ไม่ใช่ .wkShape นี่แหละคือความต่างของ "กล้องขยับ") */
+  .wkPanel.panning{animation:wkCamPan var(--glide,18s) cubic-bezier(.3,.66,.24,1) forwards}
+  @keyframes wkCamPan{
+    from{perspective-origin:var(--po0) 45%}
+    to{perspective-origin:50% 50%}}
+  /* แพนถึงกลางแล้วกล้องยังลอยเอื่อย ๆ ต่อ เผื่อคนคุมงานถือค้างไว้นาน
+     (0% ตรงกับปลายทางของ wkCamPan เป๊ะ ตอนสลับเลยไม่กระตุก
+      กฎนี้ต้องอยู่หลัง .panning — ความจำเพาะเท่ากัน ตัวหลังชนะ) */
+  .wkPanel.drift{animation:wkCamDrift 17s ease-in-out infinite}
+  @keyframes wkCamDrift{
+    0%,100%{perspective-origin:50% 50%}
+    50%{perspective-origin:43% 47%}}
 
-  .wkShape{position:relative;width:min(74vw,560px);aspect-ratio:1/1;
+  /* แผ่นเป็นสี่เหลี่ยมผืนผ้าแนวนอน (3:2) ตาม ref ไม่ใช่จัตุรัสแล้ว */
+  /* แผ่นอยู่ลึกเข้าไป Z=-300 กับ perspective 1000 → ภาพที่เห็นจะเล็กลงราว 0.77 เท่า
+     เลยต้องตั้งขนาดเผื่อไว้ ~1.4 เท่า ภาพที่ออกมาถึงจะเต็มเฟรมเท่าเดิม */
+  .wkShape{position:relative;width:min(119vw,145vh,1215px);aspect-ratio:3/2;
     display:grid;place-items:center;
-    filter:drop-shadow(0 0 40px rgba(232,220,192,.55))}
+    filter:drop-shadow(0 0 44px rgba(232,220,192,.55))}
   .wkShape svg{position:absolute;inset:0;width:100%;height:100%}
   .wkLabel{position:relative;z-index:2;
     font-family:'Noto Sans Thai',sans-serif;font-weight:900;letter-spacing:0;
     color:#fdf8ea;text-shadow:0 4px 26px rgba(0,0,0,.9);text-align:center;
-    line-height:1.1;padding:0 14%;font-size:clamp(17px,4.6vw,46px)}
-  /* ป้ายสามเหลี่ยมชี้ลง — ดันข้อความขึ้นบนให้อยู่ในเนื้อที่กว้าง */
-  #wkPos .wkLabel{transform:translateY(-16%)}
+    line-height:1.1;padding:0 10%;font-size:clamp(26px,7vw,96px)}
+  /* ป้ายบอกว่ากำลังเฉลยช่องไหน — สองแผ่นหน้าตาเหมือนกันแล้ว ต้องมีตัวบอก */
+  .wkCap{position:absolute;z-index:2;top:15%;left:0;right:0;text-align:center;
+    font-family:'Noto Sans Thai',sans-serif;font-weight:700;
+    font-size:clamp(11px,2vw,22px);letter-spacing:.22em;
+    color:rgba(232,220,192,.72);text-shadow:0 2px 12px rgba(0,0,0,.9)}
 
   /* วาบขาวตอนกระแทก + ตอนเฉลยการ์ด */
   #wkFlash{position:absolute;inset:0;z-index:6;background:#fff;opacity:0;pointer-events:none}
@@ -374,6 +449,44 @@
   #walkout.blast #wkFlash{animation:wkBlast .5s ease forwards}
   @keyframes wkBlast{0%{opacity:0}60%{opacity:1}100%{opacity:1}}
 
+  /* ---- ตราสังกัด : จอดไว้เหนือเฟรม รอกล้องแพนขึ้นมาเจอ ------------------- */
+  #wkCrest{position:absolute;left:50%;top:50%;width:min(56vmin,420px);aspect-ratio:1/1;
+    transform:translate(-50%,-50%) translateY(calc(-1 * var(--crestUp))) scale(.86);
+    opacity:0;z-index:3;display:grid;place-items:center;
+    transition:opacity .5s ease,transform .7s cubic-bezier(.16,.86,.28,1)}
+  #walkout.crest #wkCrest{opacity:1;
+    transform:translate(-50%,-50%) translateY(calc(-1 * var(--crestUp))) scale(1)}
+  .wkCrestRing{position:absolute;inset:0;border-radius:50%;
+    background:radial-gradient(circle at 50% 42%,rgba(120,180,255,.30),rgba(6,10,22,.92) 62%);
+    border:3px solid rgba(232,220,192,.55);
+    box-shadow:0 0 70px rgba(120,180,255,.5),inset 0 0 80px rgba(0,0,0,.9)}
+  /* วาดโลโก้ตามสีจริง (โลโก้ชุดปัจจุบันเป็นโครมเงิน/เส้นขาว อยู่บนพื้นมืดได้สวยอยู่แล้ว)
+     พื้นดำทึบในไฟล์ถูกคีย์ออกตั้งแต่ตอนโหลดแล้ว ดู prepLogo() */
+  .wkCrestLogo{position:relative;width:56%;height:56%;
+    background-image:var(--logo);background-size:contain;
+    background-position:center;background-repeat:no-repeat;
+    filter:drop-shadow(0 0 26px rgba(160,210,255,.95))}
+  /* เผื่อวันหลังเอาโลโก้หมึกเข้ม ๆ มาใส่ — มันจะจมหายบนพื้นมืด
+     โหมดนี้เลยใช้ตัวรูปเป็น "แม่พิมพ์" แล้วทาขาวลงไปแทน (JS ใส่คลาสให้เองอัตโนมัติ) */
+  .wkCrestLogo.ink{background-image:none;background-color:#fff;
+    -webkit-mask:var(--logo) center/contain no-repeat;
+    mask:var(--logo) center/contain no-repeat}
+  .wkCrestName{position:absolute;left:0;right:0;bottom:-13%;text-align:center;
+    font-family:Teko,'Noto Sans Thai',sans-serif;font-weight:600;
+    font-size:clamp(20px,4.4vmin,42px);letter-spacing:.24em;
+    color:#f4ecd6;text-shadow:0 0 26px rgba(120,180,255,.85)}
+
+  /* ---- ป้ายบอกให้คลิกไปต่อ ---- */
+  #wkHint{position:absolute;left:0;right:0;bottom:22px;z-index:9;text-align:center;
+    opacity:0;pointer-events:none;transition:opacity .45s ease}
+  #walkout.gate #wkHint{opacity:1}
+  #wkHint span{display:inline-block;padding:9px 20px;border-radius:999px;
+    background:rgba(6,10,22,.6);border:1px solid rgba(232,220,192,.35);
+    font-family:'Noto Sans Thai',sans-serif;font-weight:700;
+    font-size:clamp(11px,1.9vw,15px);letter-spacing:.12em;color:#f4ecd6;
+    animation:wkHintPulse 1.5s ease-in-out infinite}
+  @keyframes wkHintPulse{0%,100%{opacity:.55}50%{opacity:1}}
+
   #wkSkip{position:absolute;right:16px;bottom:16px;z-index:9;opacity:.55}
   #wkSkip:hover{opacity:1}
 
@@ -381,6 +494,10 @@
     .wkSlot{width:29%;height:24%;margin-top:-12%;font-size:clamp(11px,3.4vw,18px)}
     #wkFigure{width:40vmin}
     .wkRing{width:170vmin;height:170vmin;margin:-85vmin 0 0 -85vmin}
+    /* จอแคบ: ย่อแผ่นลง + กล้องเยื้องน้อยลง ไม่งั้นตอนกล้องอยู่ข้างจะเห็นแผ่นโดนขอบจอตัด */
+    .wkShape{width:min(105vw,145vh,1215px)}
+    .wkPanel{--po0:76%;--ry0:-6deg}
+    .wkPanel.fromL{--po0:24%;--ry0:6deg}
   }
 
   /* ---------- ประตูต้อนรับ (GATE) ---------- */
@@ -497,12 +614,22 @@
   <!-- WALKOUT : อุโมงค์ → เฉลยตำแหน่ง → เฉลยแผนก → เงาเดินเข้า → การ์ด -->
   <div id="walkout">
     <div id="wkCam">
+     <!-- #wkWorld คือตัวที่ "แพนกล้อง" — แยกจาก #wkCam ที่ทำหน้าที่สั่นตอนกระแทก
+          ถ้าเอาสองอย่างไปไว้ทรานส์ฟอร์มเดียวกันมันจะแย่งกันเอง -->
+     <div id="wkWorld">
       <div id="wkCore"></div>
       <div id="wkRings"></div>
       <div id="wkStreak"></div>
       <div id="wkFog"></div>
       <div class="wkSlot" id="wkSlotL">?</div>
       <div class="wkSlot" id="wkSlotR">?</div>
+
+      <!-- ตราสังกัด — จอดไว้เหนือเฟรม รอกล้องแพนขึ้นมาเจอ -->
+      <div id="wkCrest">
+        <div class="wkCrestRing"></div>
+        <div class="wkCrestLogo" id="wkCrestLogo"></div>
+        <div class="wkCrestName" id="wkCrestName"></div>
+      </div>
 
       <div id="wkFigure">
         <!-- เงาคน : สัดส่วนคนจริง 8 หัว — ใช้ stroke-linejoin:round ทำให้ข้อต่อมนเป็นธรรมชาติ -->
@@ -542,31 +669,34 @@
           </g>
         </svg>
       </div>
+     </div><!-- /#wkWorld -->
 
-      <!-- ป้ายเฉลยที่ 1 : ตำแหน่ง (สามเหลี่ยมชี้ลง) -->
+      <!-- ป้ายเฉลยที่ 1 : ตำแหน่ง (แผ่นสี่เหลี่ยมมน โทนเย็น) -->
       <div class="wkPanel" id="wkPos">
         <div class="wkShape">
-          <svg viewBox="0 0 200 200" preserveAspectRatio="none" aria-hidden="true">
-            <defs><linearGradient id="wkGrad1" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#1d3340"/><stop offset="1" stop-color="#0a151f"/>
+          <svg viewBox="0 0 300 200" preserveAspectRatio="none" aria-hidden="true">
+            <defs><linearGradient id="wkGrad1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#173a44"/><stop offset="1" stop-color="#08161d"/>
             </linearGradient></defs>
-            <polygon points="20,36 180,36 100,174" fill="url(#wkGrad1)"
-              stroke="#e8dcc0" stroke-width="9" stroke-linejoin="round"/>
+            <rect x="13" y="13" width="274" height="174" rx="26" fill="url(#wkGrad1)"
+              stroke="#e8dcc0" stroke-width="8"/>
           </svg>
+          <div class="wkCap">ตำแหน่ง</div>
           <div class="wkLabel" id="wkPosTxt"></div>
         </div>
       </div>
 
-      <!-- ป้ายเฉลยที่ 2 : แผนก (สี่เหลี่ยมมุมมน) -->
+      <!-- ป้ายเฉลยที่ 2 : สังกัด (แผ่นเดียวกัน โทนน้ำเงิน) -->
       <div class="wkPanel" id="wkDept">
         <div class="wkShape">
-          <svg viewBox="0 0 200 200" preserveAspectRatio="none" aria-hidden="true">
+          <svg viewBox="0 0 300 200" preserveAspectRatio="none" aria-hidden="true">
             <defs><linearGradient id="wkGrad2" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0" stop-color="#22304d"/><stop offset="1" stop-color="#0b1220"/>
             </linearGradient></defs>
-            <rect x="22" y="22" width="156" height="156" rx="34" fill="url(#wkGrad2)"
-              stroke="#e8dcc0" stroke-width="9"/>
+            <rect x="13" y="13" width="274" height="174" rx="26" fill="url(#wkGrad2)"
+              stroke="#e8dcc0" stroke-width="8"/>
           </svg>
+          <div class="wkCap">สังกัด</div>
           <div class="wkLabel" id="wkDeptTxt"></div>
         </div>
       </div>
@@ -574,6 +704,7 @@
 
     <div id="wkFlash"></div>
     <div id="wkWipe"></div>
+    <div id="wkHint"><span>คลิกเพื่อไปต่อ</span></div>
     <button class="btn sm" id="wkSkip">ข้าม ⏭</button>
   </div>
 
@@ -626,10 +757,11 @@
       </header>
       <div class="body">
         <div id="bulkWrap" style="display:none;margin-bottom:16px">
-          <p class="note">วางทีละบรรทัด รูปแบบ: <b>ชื่อ, ตำแหน่ง, แผนก</b> (ใส่แค่ชื่อก็ได้)<br>
-          ตัวอย่าง: <code>สมชาย ใจดี, หัวหน้าทีม, บัญชี</code><br>
+          <p class="note">วางทีละบรรทัด รูปแบบ: <b>ชื่อ, ตำแหน่ง, สังกัด</b> (ใส่แค่ชื่อก็ได้)<br>
+          ตัวอย่าง: <code>สมชาย ใจดี, หัวหน้าทีม, DTD</code><br>
+          สังกัดรับเฉพาะ <b>DTD</b> หรือ <b>STS</b> — ค่าอื่นจะเว้นว่างไว้ให้ไปเลือกในตาราง<br>
           ทุกคนมีโอกาสถูกสุ่มเท่ากันเสมอ</p>
-          <textarea class="inp" id="bulkText" placeholder="สมชาย ใจดี, หัวหน้าทีม, บัญชี"></textarea>
+          <textarea class="inp" id="bulkText" placeholder="สมชาย ใจดี, หัวหน้าทีม, DTD"></textarea>
           <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
             <button class="btn sm gold" id="btnBulkApply">แทนที่ทั้งหมด</button>
             <button class="btn sm" id="btnBulkAppend">เพิ่มต่อท้าย</button>
@@ -643,7 +775,7 @@
         <table class="roster">
           <thead><tr>
             <th style="width:30%">ชื่อ</th><th style="width:17%">ตำแหน่ง</th>
-            <th style="width:17%">แผนก</th><th style="width:30%">รูป</th><th></th>
+            <th style="width:17%">สังกัด</th><th style="width:30%">รูป</th><th></th>
           </tr></thead>
           <tbody id="rosterBody"></tbody>
         </table>
@@ -885,15 +1017,28 @@ function statsFor(ch){
 const STAT_LABEL={pac:'PAC',sho:'SHO',pas:'PAS',dri:'DRI',def:'DEF',phy:'PHY'};
 const GK_LABEL={pac:'DIV',sho:'HAN',pas:'KIC',dri:'REF',def:'SPD',phy:'POS'};
 
+/* สังกัดมีแค่ 2 อัน — ใช้เลือกโลโก้ที่โผล่ตอนแพนกล้องในช่วง walkout ด้วย
+   เปลี่ยนรูปได้โดยวางไฟล์ใหม่ทับใน pic/ แล้วแก้ชื่อไฟล์ตรงนี้ */
+const DEPTS={
+  DTD:{label:'DTD', logo:'pic/DTD LOGO.png'},
+  STS:{label:'STS', logo:'pic/STS LOGO.png'}
+};
+const DEPT_KEYS=Object.keys(DEPTS);
+/* รับได้ทั้ง 'dtd' / ' STS ' / 'DTD' — อย่างอื่นถือว่ายังไม่ได้เลือก */
+function normDept(v){
+  const k=String(v==null?'':v).trim().toUpperCase();
+  return DEPTS[k]?k:'';
+}
+
 function normChar(o){
   return{
     n:String(o.n||'ไม่ระบุ').trim(),
     r:clamp(Math.round(+o.r||EVENT_RATING),40,99),   // ไม่ระบุ = ใช้เรตติ้งกลาง ทุกคนเท่ากัน
     // ตำแหน่งพิมพ์อิสระ (เช่น 'หัวหน้าทีม') — เว้นว่างได้ ไม่สุ่มตำแหน่งฟุตบอลมาใส่ทับ
     p:String(o.p||'').trim(),
-    c:String(o.c||'').trim(),
+    c:normDept(o.c),                                 // สังกัด: DTD / STS เท่านั้น
     t:String(o.t||'').trim(),
-    img:o.img?String(o.img):''   // รูปหน้าคน (data URL) — ไม่ใส่ก็ใช้ซิลูเอตต์+อักษรย่อแทน
+    img:o.img?String(o.img):''   // รูปหน้าคน (data URL) — ไม่ใส่ก็ใช้ซิลูเอตต์แทน
   };
 }
 /* =========================================================================
@@ -925,24 +1070,84 @@ function cardPath(ctx,w,h,inset){
    ถ้าหาไฟล์ไม่เจอ การ์ดจะวาดต่อได้ตามปกติ แค่ไม่มีโลโก้ */
 const STM_LOGO_SRC='pic/STM_Logo-removebg-preview.png';
 let STM_LOGO=null;
-function loadStmLogo(){
+const LOGO_CACHE={};
+
+/* ---- เตรียมไฟล์โลโก้ก่อนเอาไปใช้ ---------------------------------------
+   ไฟล์โลโก้ที่ส่งมาบางไฟล์ไม่มีช่องโปร่งแสง (พื้นดำทึบเต็มรูป) ถ้าเอาไปวาดตรง ๆ
+   จะได้กล่องดำสี่เหลี่ยมแปะทับการ์ด/ตราสังกัด เลยคีย์พื้นดำออกให้เองตรงนี้
+   ใช้ความสว่างสูงสุดของพิกเซลเป็นค่าความทึบ → ดำสนิทหายไป สีอื่น (แดง/เงิน/ขาว) อยู่ครบ
+   ไฟล์ที่โปร่งมาอยู่แล้วจะไม่ถูกแตะ
+
+   หมายเหตุ: getImageData ที่ใช้ตรงนี้ทำหน้าที่เช็ก taint ไปในตัว — เปิดไฟล์ด้วย
+   file:// เบราว์เซอร์จะถือว่ารูปข้ามโดเมน อ่านพิกเซลไม่ได้ ก็จะคืน null แล้วข้าม
+   โลโก้ไปเงียบ ๆ (การ์ดกับเท็กซ์เจอร์ 3D ยังออกครบ ไม่พังทั้งใบ) */
+function prepLogo(im){
+  const cv=newCanvas(im.width,im.height), cx=cv.getContext('2d');
+  cx.drawImage(im,0,0);
+  let d;
+  try{ d=cx.getImageData(0,0,cv.width,cv.height); }catch(e){ return null; }
+  const p=d.data;
+  let hasAlpha=false;
+  for(let i=3;i<p.length;i+=4){ if(p[i]<250){ hasAlpha=true; break; } }
+  if(!hasAlpha){
+    for(let i=0;i<p.length;i+=4){
+      const m=Math.max(p[i],p[i+1],p[i+2]);
+      p[i+3]=m<24?0:Math.min(255,Math.round(m*1.3));
+    }
+    cx.putImageData(d,0,0);
+  }
+  return thickenHairline(cv);
+}
+/* โลโก้บางไฟล์เป็นลายเส้นขอบบางมาก พอย่อลงมาเป็นตราเล็ก ๆ เส้นจะบางกว่า 1 พิกเซล
+   จนแทบมองไม่เห็น — ถ้าเจอแบบนั้นให้วาดซ้อนเยื้องรอบทิศทีละนิด เส้นจะอ้วนขึ้นพอมองออก
+   (โลโก้ที่เส้นหนาพออยู่แล้วจะไม่โดนแตะ) */
+function thickenHairline(cv){
+  let p;
+  try{ p=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data; }catch(e){ return cv; }
+  let on=0;
+  for(let i=3;i<p.length;i+=4)if(p[i]>128)on++;
+  if(on/(cv.width*cv.height)>0.03)return cv;      // เส้นหนาพอแล้ว
+  const r=Math.max(2,Math.round(cv.width*0.008));
+  const out=newCanvas(cv.width,cv.height), ox=out.getContext('2d');
+  for(let ring=1;ring<=2;ring++){
+    const rr=r*ring/2;
+    for(let a=0;a<12;a++)ox.drawImage(cv,Math.cos(a*Math.PI/6)*rr,Math.sin(a*Math.PI/6)*rr);
+  }
+  ox.drawImage(cv,0,0);
+  return out;
+}
+/* โลโก้ทึบ ๆ ดำ ๆ จะจมหายบนพื้นมืด — เช็กความสว่างเฉลี่ยไว้ ตราสังกัดจะได้เลือกวิธีวาดถูก */
+function isDarkArt(cv){
+  try{
+    const p=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;
+    let sum=0,n=0;
+    for(let i=0;i<p.length;i+=4){
+      if(p[i+3]<128)continue;
+      sum+=p[i]*.299+p[i+1]*.587+p[i+2]*.114; n++;
+    }
+    return n?(sum/n)<110:false;
+  }catch(e){ return false; }
+}
+/* โหลดโลโก้ 1 ไฟล์ → คืน {cv, url, dark} (หาไฟล์ไม่เจอ/อ่านไม่ได้ = null) */
+function loadLogo(src){
+  if(LOGO_CACHE[src]!==undefined)return Promise.resolve(LOGO_CACHE[src]);
   return new Promise(res=>{
     const im=new Image();
-    im.onload=()=>{ STM_LOGO=canUseImage(im)?im:null; res(); };
-    im.onerror=()=>res();
-    im.src=STM_LOGO_SRC;
+    im.onload=()=>{
+      const cv=prepLogo(im);
+      let url='';
+      if(cv){ try{ url=cv.toDataURL('image/png'); }catch(e){} }
+      res(LOGO_CACHE[src]=cv?{cv:cv,url:url,dark:isDarkArt(cv)}:null);
+    };
+    im.onerror=()=>res(LOGO_CACHE[src]=null);
+    im.src=src;
   });
 }
-/* เปิดไฟล์ตรง ๆ ด้วย file:// เบราว์เซอร์จะถือว่ารูปข้ามโดเมน → canvas โดน "taint"
-   แล้ว toDataURL (รูปย่อในคลัง) กับเท็กซ์เจอร์ของ Three.js จะพังทั้งใบ
-   เลยทดสอบก่อนว่าเอารูปมาใช้ได้จริงไหม ถ้าไม่ได้ก็ข้ามโลโก้ไป การ์ดยังออกครบ */
-function canUseImage(im){
-  try{
-    const t=newCanvas(2,2);
-    t.getContext('2d').drawImage(im,0,0,2,2);
-    t.toDataURL();
-    return true;
-  }catch(e){ return false; }
+/* โหลดล่วงหน้าตอนบูต: โลโก้บนการ์ด + โลโก้สังกัดทุกอัน */
+function loadLogos(){
+  const jobs=[loadLogo(STM_LOGO_SRC).then(o=>{ STM_LOGO=o&&o.cv; })];
+  DEPT_KEYS.forEach(k=>jobs.push(loadLogo(DEPTS[k].logo)));
+  return Promise.all(jobs);
 }
 function drawLogo(ctx,cx,cy,w,glow){
   const im=STM_LOGO;
@@ -1928,14 +2133,20 @@ function applyCardTexture(ch){
 /* ---------------------------------------------------------------- walkout */
 /* จังหวะแต่ละช่วง (มิลลิวินาที) — ปรับได้ตามใจ */
 const WK={
-  spdUp:1000,     // เริ่มเร่งความเร็วอุโมงค์
-  wipe:760,       // แผ่นดำกวาดผ่านจอกี่ ms (ครึ่งทาง = จอมืดมิด = จังหวะสลับฉาก)
-  p1:1500,        // เริ่มทรานซิชันแรก
-  hold:1900,      // ค้างให้อ่านป้ายแต่ละอันก่อนกวาดไปฉากถัดไป
-  walk:3000,      // เงาพุ่งเข้าหากล้อง
-  blast:520
+  spdUp:1200,     // เริ่มเร่งความเร็วอุโมงค์
+  wipe:950,       // แผ่นดำกวาดผ่านจอกี่ ms (ครึ่งทาง = จอมืดมิด = จังหวะสลับฉาก)
+  p1:1800,        // เริ่มทรานซิชันแรก
+  turn:2100,      // แผ่นป้ายหมุนเข้าที่ (90 องศา) กี่ ms
+  glide:18000,    // กล้องแพนจากข้างจอเข้าหากลางจอ (กดไปต่อได้ระหว่างแพน ไม่ต้องรอจบ)
+  walk:3800,      // เงาพุ่งเข้าหากล้อง
+  preCrest:750,   // เว้นจังหวะหลังเงาเดินถึง ก่อนแพนกล้องขึ้น
+  pan:1100,       // แพนกล้องขึ้นไปหาตราสังกัด
+  crestHold:2200, // ค้างดูตราสังกัด
+  pan2:950,       // แพนต่อไปหาการ์ด
+  blast:620
 };
 let wkTimers=[], wkDone=false;
+let wkStep=0, wkGate=false;
 
 function wkClear(){ wkTimers.forEach(clearTimeout); wkTimers=[]; }
 function wkAt(ms,fn){ wkTimers.push(setTimeout(fn,ms)); }
@@ -1981,14 +2192,18 @@ function startWalkout(){
   const w=$('walkout');
   wkClear(); wkDone=false;
   state='walkout'; tState=0;
+  wkStep=0; wkGate=false;
   wkBuildRings();
 
   // รีเซ็ตทุกอย่างให้เล่นใหม่ได้ (ต้อง reflow ก่อน ไม่งั้น animation ไม่รีสตาร์ท)
   w.className='';
+  w.style.setProperty('--turn',WK.turn+'ms');
+  w.style.setProperty('--walk',WK.walk+'ms');
+  w.style.setProperty('--glide',WK.glide+'ms');   // ตกทอดถึงทั้งชั้นป้ายและชั้นอุโมงค์
   $('wkCam').classList.remove('hit','hitBig');
   $('wkFlash').classList.remove('pop');
   $('wkWipe').classList.remove('sweep');
-  ['wkPos','wkDept'].forEach(id=>$(id).classList.remove('show'));
+  ['wkPos','wkDept'].forEach(id=>$(id).classList.remove('show','panning','drift','fromL'));
   $('wkSlotL').classList.remove('filled'); $('wkSlotR').classList.remove('filled');
   $('wkSlotL').classList.add('wait'); $('wkSlotR').classList.add('wait');
   $('wkSlotL').textContent='?'; $('wkSlotR').textContent='?';
@@ -2002,42 +2217,121 @@ function startWalkout(){
   // เร่งความเร็วอุโมงค์
   wkAt(WK.spdUp,()=>w.classList.add('spd2'));
 
-  // 1) ตัดฉากเข้าป้ายตำแหน่ง
-  const t1=WK.p1;
-  wkCut(t1,()=>{
-    $('wkPos').classList.add('show');
-    $('wkSlotL').textContent=current.p||'—'; $('wkSlotL').classList.remove('wait'); $('wkSlotL').classList.add('filled');
-  },()=>{
-    wkImpact(false);
-    try{SFX.thump();SFX.blip(760,.14,'triangle',.28);}catch(e){}
-  });
+  // จังหวะแรกมาเอง ที่เหลือรอคนกดคลิก
+  wkAt(WK.p1,()=>wkBeat(0));
+}
 
-  // 2) ตัดฉากจากป้ายตำแหน่ง → ป้ายแผนก (สลับตอนจอมืด จะได้ไม่เห็นป้ายซ้อนกัน)
-  const t2=t1+WK.wipe+WK.hold;
-  wkCut(t2,()=>{
-    $('wkPos').classList.remove('show');
-    $('wkDept').classList.add('show');
-    $('wkSlotR').textContent=current.c||'—'; $('wkSlotR').classList.remove('wait'); $('wkSlotR').classList.add('filled');
-  },()=>{
-    wkImpact(false);
-    try{SFX.thump();SFX.blip(940,.14,'triangle',.28);}catch(e){}
-  });
-
-  // 3) ตัดฉากจากป้ายแผนก → อุโมงค์เปล่า แล้วเงาโผล่พุ่งเข้าหากล้อง (อุโมงค์เร่งสุด)
-  const t3=t2+WK.wipe+WK.hold;
-  const tWalk=t3+WK.wipe*0.5;
-  wkCut(t3,()=>{
-    $('wkDept').classList.remove('show');
+/* ---- จังหวะเฉลยทีละสเต็ป : 0=ตำแหน่ง 1=สังกัด 2=คนเดินเข้า+ตราสังกัด+การ์ด ----
+   สองสเต็ปแรกจบแล้ว "เปิดประตู" ค้างรอคลิก — ไม่มีตัวจับเวลามาไล่ ให้คนคุมงานกดเอง */
+function wkBeat(i){
+  const w=$('walkout');
+  /* สลับโทนพื้นหลังตอนแผ่นดำบังจอ — คนดูจะเห็นว่า "ฉากเปลี่ยน" ไม่ใช่ป้ายเปลี่ยนเฉย ๆ */
+  const tone=t=>{ w.classList.remove('toneA','toneB','toneC'); w.classList.add(t); };
+  if(i===0){
+    wkCut(0,()=>{
+      tone('toneA');
+      $('wkPos').classList.add('show');       // เข้าจากขวา (ค่าเริ่มต้น)
+      $('wkSlotL').textContent=current.p||'—';
+      $('wkSlotL').classList.remove('wait'); $('wkSlotL').classList.add('filled');
+    },()=>{
+      wkImpact(false);
+      try{SFX.thump();SFX.blip(760,.14,'triangle',.28);}catch(e){}
+    });
+    wkPanelGlide('wkPos','camR');
+    return;
+  }
+  if(i===1){
+    wkCut(0,()=>{
+      tone('toneB');
+      $('wkPos').classList.remove('show','panning','drift');
+      $('wkDept').classList.add('fromL','show');   // จังหวะนี้เข้าจากซ้าย
+      $('wkSlotR').textContent=current.c||'—';
+      $('wkSlotR').classList.remove('wait'); $('wkSlotR').classList.add('filled');
+    },()=>{
+      wkImpact(false);
+      try{SFX.thump();SFX.blip(940,.14,'triangle',.28);}catch(e){}
+    });
+    wkPanelGlide('wkDept','camL');
+    return;
+  }
+  // สเต็ปสุดท้าย — ตั้งแต่ตรงนี้วิ่งยาวจบเอง ไม่ต้องกดอีก
+  wkCut(0,()=>{
+    tone('toneC');
+    $('wkDept').classList.remove('show','panning','drift');
+    // ปิดกล้องแพนของช่วงป้ายก่อน ไม่งั้นมันจะค้างวิ่งทับช่วงแพนขึ้นไปหาตราสังกัด
+    w.classList.remove('camR','camL');
     w.classList.add('walk','spd3');
     try{SFX.charge(2.8);}catch(e){}
   });
+  const tWalk=WK.wipe*0.5;
   wkAt(tWalk+WK.walk*0.45,()=>{ shake=Math.max(shake,.6); });
   wkAt(tWalk+WK.walk*0.8,()=>{ shake=Math.max(shake,1); });
+  wkAt(tWalk+WK.walk,wkCrestBeat);   // ช่วงต่อจากนี้นับเวลาจากตอนเงาเดินมาถึงพอดี
+}
 
-  // 4) วาบขาว แล้วส่งต่อให้การ์ด
-  const tBlast=tWalk+WK.walk;
-  wkAt(tBlast,()=>{ w.classList.add('blast'); wkImpact(true); try{SFX.burst();}catch(e){} });
-  wkAt(tBlast+WK.blast,endWalkout);
+/* ---- แพนกล้องขึ้นไปหาตราสังกัด แล้วแพนต่อไปเปิดการ์ด ----
+   ถ้าคนนั้นยังไม่ได้เลือกสังกัด (รายชื่อเก่าที่บันทึกไว้ก่อนมีดรอปดาวน์) ข้ามช่วงตรานี้ไปเลย */
+function wkCrestBeat(){
+  const w=$('walkout'), dept=DEPTS[current.c], art=dept&&LOGO_CACHE[dept.logo];
+  if(!dept||!art){ wkBlastToCard(0); return; }   // ไม่ได้เลือกสังกัด / โหลดรูปไม่ได้ → ข้ามไปเปิดการ์ดเลย
+
+  const el=$('wkCrestLogo');
+  el.style.setProperty('--logo','url("'+art.url+'")');
+  el.classList.toggle('ink',art.dark);           // โลโก้เข้มเกินไป → สลับไปโหมดทาขาวเรืองแสง
+  $('wkCrestName').textContent=dept.label;
+  w.style.setProperty('--pan',WK.pan+'ms');
+  w.style.setProperty('--pan2',WK.pan2+'ms');
+
+  // 1) เว้นจังหวะนิดนึงหลังเงาเดินมาถึง แล้วค่อยแพนกล้องขึ้น
+  wkAt(WK.preCrest,()=>{
+    w.classList.add('pan1','crest');
+    try{SFX.charge(1.0);}catch(e){}
+  });
+  // 2) ตราเข้ากลางจอ — กระแทกเบา ๆ ให้รู้สึกว่ากล้องหยุด
+  wkAt(WK.preCrest+WK.pan,()=>{
+    wkImpact(false);
+    try{SFX.thump();SFX.blip(880,.18,'triangle',.3);}catch(e){}
+  });
+  // 3) ค้างให้ดูตรา แล้วแพนต่อไปหาการ์ด
+  const tPan2=WK.preCrest+WK.pan+WK.crestHold;
+  wkAt(tPan2,()=>{
+    w.classList.remove('pan1'); w.classList.add('pan2');
+    try{SFX.charge(0.8);}catch(e){}
+  });
+  wkBlastToCard(tPan2+WK.pan2);
+}
+
+/* วาบขาว แล้วส่งไม้ต่อให้ฉากการ์ด */
+function wkBlastToCard(t){
+  const w=$('walkout');
+  wkAt(t,()=>{ w.classList.add('blast'); wkImpact(true); try{SFX.burst();}catch(e){} });
+  wkAt(t+WK.blast,endWalkout);
+}
+
+/* ไล่จังหวะของแผ่นป้าย : หมุนเข้าที่ → กล้องแพนเข้าหากลางจอ → ลอยเบา ๆ ค้างไว้
+   เปิดให้กดได้ตั้งแต่แพนเสร็จ (ระหว่างแพนยังกดข้ามได้ด้วยปุ่ม "ข้าม") */
+function wkPanelGlide(id,camClass){
+  const t0=WK.wipe*0.5+WK.turn, w=$('walkout');
+  wkAt(t0,()=>{
+    // กล้องเริ่มแพน พร้อมกันทั้งชั้นป้ายและชั้นอุโมงค์ จะได้เป็นการเคลื่อนกล้องครั้งเดียว
+    $(id).classList.add('panning');
+    w.classList.remove('camR','camL'); void w.offsetWidth; w.classList.add(camClass);
+    wkOpenGate();
+  });
+  wkAt(t0+WK.glide,()=>$(id).classList.add('drift'));
+}
+
+/* เปิดประตูรอคลิก / กดแล้วไปสเต็ปถัดไป */
+function wkOpenGate(){
+  wkGate=true;
+  $('walkout').classList.add('gate');
+}
+function wkAdvance(){
+  if(!wkGate)return;          // กดตอนกำลังเปลี่ยนฉากอยู่ = ไม่มีอะไรเกิดขึ้น กันกดรัว
+  wkGate=false;
+  $('walkout').classList.remove('gate');
+  wkClear();                  // ล้างคิวของสเต็ปเดิมก่อนเริ่มสเต็ปใหม่
+  wkBeat(++wkStep);
 }
 
 function endWalkout(){
@@ -2333,7 +2627,7 @@ function renderRoster(){
     tr.innerHTML=
       '<td><input class="inp" data-i="'+i+'" data-k="n" value="'+esc(c.n)+'" placeholder="ชื่อ"></td>'+
       '<td><input class="inp" data-i="'+i+'" data-k="p" value="'+esc(c.p)+'" placeholder="ตำแหน่ง"></td>'+
-      '<td><input class="inp" data-i="'+i+'" data-k="c" value="'+esc(c.c)+'" placeholder="แผนก"></td>'+
+      '<td>'+deptSelect(i,c.c)+'</td>'+
       '<td><div class="photoCell">'+
         '<label class="photoLbl" title="อัปโหลดรูปหน้าคนนี้">'+
           (c.img?'<img src="'+esc(c.img)+'">':'<span class="photoPh">+รูป</span>')+
@@ -2348,6 +2642,17 @@ function renderRoster(){
   document.getElementById('rosterCount').textContent=draft.length+' คน';
 }
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+/* ช่องสังกัดเป็นดรอปดาวน์บังคับเลือก — มีแค่ DTD/STS เพราะโลโก้ตอนแพนกล้องผูกกับค่านี้
+   (<select> ยิง event 'input' เหมือน <input> ตัวดักที่ #rosterBody เลยรับต่อได้เลย) */
+function deptSelect(i,val){
+  let h='<select class="inp'+(val?'':' need')+'" data-i="'+i+'" data-k="c">';
+  h+='<option value=""'+(val?'':' selected')+'>— เลือกสังกัด —</option>';
+  DEPT_KEYS.forEach(k=>{
+    h+='<option value="'+k+'"'+(val===k?' selected':'')+'>'+DEPTS[k].label+'</option>';
+  });
+  return h+'</select>';
+}
 
 /* ---- อ่านไฟล์รูปที่อัปโหลด แล้วย่อขนาดลงก่อนเก็บ (กันเปลืองพื้นที่ localStorage) ---- */
 function fileToResizedDataURL(file,maxDim){
@@ -2374,10 +2679,11 @@ function fileToResizedDataURL(file,maxDim){
 function parseBulk(txt){
   return txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>{
     const f=l.split(/\s*[,\t|]\s*/);
-    // รูปแบบใหม่: ชื่อ, ตำแหน่ง, แผนก
-    // ยังรับรูปแบบเดิมที่มีเรตติ้งคั่นกลางได้ด้วย: ชื่อ, 80, ตำแหน่ง, แผนก (ตัวเลขจะถูกข้าม)
+    // รูปแบบ: ชื่อ, ตำแหน่ง, สังกัด(DTD/STS)
+    // ยังรับรูปแบบเดิมที่มีเรตติ้งคั่นกลางได้ด้วย: ชื่อ, 80, ตำแหน่ง, สังกัด (ตัวเลขจะถูกข้าม)
     const hasRating=f.length>1&&/^\d+$/.test(String(f[1]||'').trim());
     const rest=hasRating?f.slice(2):f.slice(1);
+    // normChar กรองสังกัดให้เอง — ค่าที่ไม่ใช่ DTD/STS จะกลายเป็นว่าง แล้วไปเลือกในตารางเอา
     return normChar({n:f[0],r:EVENT_RATING,p:rest[0],c:rest[1],t:''});
   });
 }
@@ -2486,7 +2792,8 @@ function bindUI(){
   $('rosterBody').addEventListener('input',e=>{
     const el=e.target;if(!el.dataset||el.dataset.i===undefined)return;
     const i=+el.dataset.i,k=el.dataset.k;
-    draft[i][k]=el.value;   // มีแค่ช่องข้อความ (n/p/c) แล้ว
+    draft[i][k]=k==='c'?normDept(el.value):el.value;
+    if(k==='c')el.classList.toggle('need',!draft[i].c);   // เลือกแล้วให้กรอบแดงหายทันที
   });
   $('rosterBody').addEventListener('click',e=>{
     const delImg=e.target.closest('[data-delimg]');
@@ -2522,6 +2829,13 @@ function bindUI(){
   });
   $('btnSaveRoster').addEventListener('click',async()=>{
     if(!draft.length){showToast('ต้องมีอย่างน้อย 1 ตัวละคร','error');return;}
+    // สังกัดบังคับเลือก — โลโก้ตอนแพนกล้องผูกกับค่านี้ ปล่อยว่างไว้จะไม่มีตราให้โชว์
+    const missing=draft.filter(c=>!c.c).length;
+    if(missing){
+      showToast('ยังไม่ได้เลือกสังกัดอีก '+missing+' คน — เลือก DTD หรือ STS ให้ครบก่อนบันทึก','error');
+      renderRoster();
+      return;
+    }
     const ok=await showConfirm('บันทึกรายชื่อผู้เข้าร่วมทั้งหมด '+draft.length+' คน?',
       {title:'บันทึกข้อมูล',okText:'บันทึก'});
     if(!ok)return;
@@ -2593,9 +2907,9 @@ function bindUI(){
     showToast('เริ่มรอบใหม่แล้ว ทุกคนกลับเข้ากองแล้ว','success');
   });
 
-  // ข้าม walkout — กดปุ่มหรือแตะที่ไหนก็ได้
+  // แตะที่ไหนก็ได้ = ไปจังหวะถัดไป (ไม่ใช่ข้ามทั้งชุดแล้ว) / ปุ่ม "ข้าม" ถึงจะข้ามจริง
   $('wkSkip').addEventListener('click',e=>{e.stopPropagation();endWalkout();});
-  $('walkout').addEventListener('pointerdown',()=>{ if(state==='walkout')endWalkout(); });
+  $('walkout').addEventListener('pointerdown',()=>{ if(state==='walkout')wkAdvance(); });
 
   // คลิกบนฉาก
   renderer.domElement.addEventListener('pointerdown',()=>{
@@ -2611,7 +2925,11 @@ function bindUI(){
     const tag=(e.target&&e.target.tagName||'').toLowerCase();
     const typing=tag==='input'||tag==='textarea'||tag==='select'||(e.target&&e.target.isContentEditable);
     if(typing)return;   // กำลังพิมพ์อยู่ในช่องกรอกข้อมูล — อย่าไปแย่งปุ่มเว้นวรรค/Enter
-    if(e.code==='Space'||e.code==='Enter'){e.preventDefault();if(state==='idle'||state==='show')requestOpenPack();}
+    if(e.code==='Space'||e.code==='Enter'){
+      e.preventDefault();
+      if(state==='idle'||state==='show')requestOpenPack();
+      else if(state==='walkout')wkAdvance();   // ใช้รีโมตนำเสนอกดไปต่อได้เหมือนคลิก
+    }
   });
 }
 
@@ -2685,7 +3003,7 @@ async function boot(){
   try{ if(document.fonts&&document.fonts.load){
     await Promise.all([document.fonts.load('700 100px Teko'),document.fonts.load('900 100px "Noto Sans Thai"')]);
   }}catch(e){}
-  try{ await loadStmLogo(); }catch(e){}   // โหลดโลโก้ก่อนวาดการ์ดใบแรก
+  try{ await loadLogos(); }catch(e){}   // โหลดโลโก้ก่อนวาดการ์ดใบแรก
   ROSTER=ROSTER.map(c=>normChar(c));
   preloadRosterImages();
   initThree();
