@@ -315,24 +315,38 @@
     25%{transform:scaleX(.82);opacity:.28}50%{transform:scaleX(1);opacity:.45}
     75%{transform:scaleX(.82);opacity:.28}}
 
-  /* จังหวะเงียบมืดก่อนเงาโผล่ — เพิ่มความลุ้น */
-  #wkDim{position:absolute;inset:0;z-index:4;background:#000;opacity:0;pointer-events:none;
-    transition:opacity .35s ease}
-  #walkout.hush #wkDim{opacity:.88}
+  /* ---- ทรานซิชันตัดฉาก : แผ่นดำกวาดผ่านจอ (สไตล์ FIFA) --------------------
+     กว้าง 200% + เอียง 14° เพื่อให้ตอนอยู่กลางจอมันบังมิดจริง ๆ
+     ระหว่างที่บังมิด โค้ดจะสลับสิ่งที่อยู่ข้างหลังทิ้งไว้ พอแผ่นผ่านไปก็เห็นของใหม่ */
+  #wkWipe{position:absolute;top:-30%;left:-50%;width:200%;height:160%;z-index:7;
+    pointer-events:none;opacity:0;will-change:transform;
+    transform:translateX(-100%) skewX(-14deg);
+    background:linear-gradient(90deg,rgba(2,4,10,0) 0,#010308 7%,#010308 93%,rgba(2,4,10,0) 100%)}
+  #wkWipe::before,#wkWipe::after{content:'';position:absolute;top:-10%;height:120%;width:4px;
+    background:linear-gradient(180deg,transparent,rgba(244,208,63,.95) 22%,rgba(255,240,190,1) 50%,rgba(244,208,63,.95) 78%,transparent);
+    box-shadow:0 0 34px rgba(244,208,63,.85),0 0 90px rgba(244,208,63,.4)}
+  #wkWipe::before{left:6.5%}
+  #wkWipe::after{right:6.5%}
+  /* ระยะเวลาคุมจาก JS ผ่าน --wipe จะได้ไม่หลุดคีย์กับจังหวะสลับเนื้อหา
+     ช่วง 42–58% จงใจให้แผ่นเกือบหยุดกลางจอ = มีหน้าต่างมืดมิดกว้างพอ (~200ms)
+     ให้สลับฉากได้ปลอดภัย ไม่แวบให้เห็นตอนกำลังสลับ */
+  #wkWipe.sweep{animation:wkWipe var(--wipe,.76s) linear forwards}
+  @keyframes wkWipe{
+    0%{transform:translateX(-100%) skewX(-14deg);opacity:1;
+      animation-timing-function:cubic-bezier(.42,0,.75,.6)}
+    42%{transform:translateX(-2.5%) skewX(-14deg);animation-timing-function:linear}
+    58%{transform:translateX(2.5%) skewX(-14deg);
+      animation-timing-function:cubic-bezier(.25,.4,.58,1)}
+    100%{transform:translateX(100%) skewX(-14deg);opacity:1}}
 
-  /* ป้ายเฉลย — พุ่งจากไกล กระแทก เด้ง ค้าง แล้วผ่านหัวไป */
+  /* ป้ายเฉลย — โผล่ตอนจอโดนแผ่นดำบังอยู่ แล้วค่อย ๆ เข้าที่พอแผ่นผ่านไป */
   .wkPanel{position:absolute;inset:0;display:none;place-items:center;z-index:5;
     transform-style:preserve-3d}
-  .wkPanel.go{display:grid;animation:wkSlam 2.4s cubic-bezier(.16,.86,.28,1) forwards}
-  @keyframes wkSlam{
-    0%{transform:translateZ(-2400px) rotateY(78deg) rotateZ(-16deg);opacity:0;filter:blur(10px)}
-    16%{opacity:1;filter:blur(2px)}
-    26%{transform:translateZ(150px) rotateY(-10deg) rotateZ(4deg);filter:blur(0)}
-    33%{transform:translateZ(-40px) rotateY(4deg) rotateZ(-1.5deg)}
-    40%{transform:translateZ(0) rotateY(0) rotateZ(0)}
-    /* ค้างให้อ่านทัน ~0.9 วิ */
-    78%{transform:translateZ(0) rotateY(0) rotateZ(0);opacity:1}
-    100%{transform:translateZ(950px) rotateY(0) rotateZ(3deg);opacity:0;filter:blur(4px)}}
+  .wkPanel.show{display:grid;animation:wkPanelIn .62s cubic-bezier(.14,.86,.24,1) forwards}
+  @keyframes wkPanelIn{
+    0%{transform:scale(1.16) translateZ(0);opacity:0;filter:blur(7px)}
+    45%{opacity:1}
+    100%{transform:scale(1) translateZ(0);opacity:1;filter:blur(0)}}
 
   .wkShape{position:relative;width:min(74vw,560px);aspect-ratio:1/1;
     display:grid;place-items:center;
@@ -352,7 +366,7 @@
   #walkout.blast #wkFlash{animation:wkBlast .5s ease forwards}
   @keyframes wkBlast{0%{opacity:0}60%{opacity:1}100%{opacity:1}}
 
-  #wkSkip{position:absolute;right:16px;bottom:16px;z-index:7;opacity:.55}
+  #wkSkip{position:absolute;right:16px;bottom:16px;z-index:9;opacity:.55}
   #wkSkip:hover{opacity:1}
 
   @media(max-width:640px){
@@ -550,8 +564,8 @@
       </div>
     </div><!-- /#wkCam -->
 
-    <div id="wkDim"></div>
     <div id="wkFlash"></div>
+    <div id="wkWipe"></div>
     <button class="btn sm" id="wkSkip">ข้าม ⏭</button>
   </div>
 
@@ -1121,8 +1135,11 @@ function renderCardBack(){
   bg.addColorStop(0,'#fdf1b8');bg.addColorStop(.55,'#c9a227');bg.addColorStop(1,'#7a5a10');
   ctx.fillStyle=bg;ctx.fill();
   ctx.lineWidth=12;ctx.strokeStyle='rgba(255,255,255,.5)';ctx.stroke();
-  ctx.fillStyle='#1a1405';ctx.font=TK(210,700);ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText('U',0,10);
+  // โลโก้ STM กลางตรากลม (ถ้าโหลดรูปไม่ได้ ใช้ตัว U แบบเดิมแทน)
+  if(!drawLogo(ctx,0,6,CW*0.36,false)){
+    ctx.fillStyle='#1a1405';ctx.font=TK(210,700);ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('U',0,10);
+  }
   ctx.restore();
   ctx.fillStyle='rgba(244,208,63,.85)';ctx.textAlign='center';ctx.font=TK(64,600);
   ctx.fillText('ULTIMATE DRAW',CW/2,CH*0.75);
@@ -1626,6 +1643,20 @@ const SFX={
     f.frequency.setValueAtTime(900,t);f.frequency.exponentialRampToValueAtTime(3600,t+0.3);
     n.connect(f);this.env(f,t,0.02,0.32,0.3);n.start(t);n.stop(t+0.5);
   },
+  /* เสียงลมกวาดผ่านจอ — ใช้คู่กับแผ่นดำตอนตัดฉาก (เสียงวิ่งจากแหลมลงต่ำแบบสวบ) */
+  whoosh(){
+    const c=this.ensure();if(!c)return;const t=c.currentTime;
+    const n=this.noiseSrc();
+    const f=c.createBiquadFilter();f.type='bandpass';f.Q.value=0.9;
+    f.frequency.setValueAtTime(320,t);
+    f.frequency.exponentialRampToValueAtTime(4200,t+0.22);
+    f.frequency.exponentialRampToValueAtTime(280,t+0.62);
+    n.connect(f);
+    const g=c.createGain();g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.5,t+0.16);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.7);
+    f.connect(g);g.connect(this.master);n.start(t);n.stop(t+0.8);
+  },
   /* เสียง "ฟุบ" เบสหนักแบบตอนป้ายเฉลยกระแทกจอ (สไตล์ EA) */
   thump(){
     const c=this.ensure();if(!c)return;const t=c.currentTime;
@@ -1793,12 +1824,10 @@ function applyCardTexture(ch){
 /* ---------------------------------------------------------------- walkout */
 /* จังหวะแต่ละช่วง (มิลลิวินาที) — ปรับได้ตามใจ */
 const WK={
-  spdUp:1200,     // เริ่มเร่งความเร็วอุโมงค์
-  p1:2200,        // ป้ายที่ 1 พุ่งออกมา
-  impact:960,     // ป้ายกระแทกหยุดหลังพุ่งออกมากี่ ms (ตรงกับคีย์เฟรม 40% ของ 2.4s)
-  gap:2800,       // ระยะห่างระหว่างป้าย 1 → 2 (ต้อง > panel เพื่อไม่ให้ป้ายซ้อนกัน)
-  panel:2400,     // ความยาวอนิเมชันป้าย
-  hush:600,       // จังหวะมืดเงียบก่อนเงาโผล่ (ตัวเรียกความลุ้น)
+  spdUp:1000,     // เริ่มเร่งความเร็วอุโมงค์
+  wipe:760,       // แผ่นดำกวาดผ่านจอกี่ ms (ครึ่งทาง = จอมืดมิด = จังหวะสลับฉาก)
+  p1:1500,        // เริ่มทรานซิชันแรก
+  hold:1900,      // ค้างให้อ่านป้ายแต่ละอันก่อนกวาดไปฉากถัดไป
   walk:3000,      // เงาพุ่งเข้าหากล้อง
   blast:520
 };
@@ -1806,6 +1835,21 @@ let wkTimers=[], wkDone=false;
 
 function wkClear(){ wkTimers.forEach(clearTimeout); wkTimers=[]; }
 function wkAt(ms,fn){ wkTimers.push(setTimeout(fn,ms)); }
+
+/* กวาดแผ่นดำผ่านจอ 1 ครั้ง — ต้องถอดคลาส + reflow ก่อน ไม่งั้นรอบสองไม่เล่นซ้ำ */
+function wkWipeGo(){
+  const el=$('wkWipe');
+  el.style.setProperty('--wipe',WK.wipe+'ms');
+  el.classList.remove('sweep'); void el.offsetWidth; el.classList.add('sweep');
+  try{ SFX.whoosh(); }catch(e){}
+}
+/* ทรานซิชัน 1 จังหวะ: กวาดแผ่นดำ → พอบังมิดค่อยสลับฉากข้างหลัง → พอแผ่นพ้นจอค่อยกระแทก
+   (กระแทกต้องรอให้แผ่นพ้นจอก่อน ไม่งั้นแสงวาบจะโดนแผ่นดำบังไปครึ่งจอ) */
+function wkCut(t,swap,hit){
+  wkAt(t,wkWipeGo);
+  wkAt(t+WK.wipe*0.5,swap);
+  if(hit)wkAt(t+WK.wipe*0.96,hit);
+}
 
 /* วงแหวนอุโมงค์ — สร้างครั้งเดียวพอ */
 function wkBuildRings(){
@@ -1839,7 +1883,8 @@ function startWalkout(){
   w.className='';
   $('wkCam').classList.remove('hit','hitBig');
   $('wkFlash').classList.remove('pop');
-  ['wkPos','wkDept'].forEach(id=>$(id).classList.remove('go'));
+  $('wkWipe').classList.remove('sweep');
+  ['wkPos','wkDept'].forEach(id=>$(id).classList.remove('show'));
   $('wkSlotL').classList.remove('filled'); $('wkSlotR').classList.remove('filled');
   $('wkSlotL').classList.add('wait'); $('wkSlotR').classList.add('wait');
   $('wkSlotL').textContent='?'; $('wkSlotR').textContent='?';
@@ -1853,41 +1898,39 @@ function startWalkout(){
   // เร่งความเร็วอุโมงค์
   wkAt(WK.spdUp,()=>w.classList.add('spd2'));
 
-  // 1) ป้ายตำแหน่ง — พุ่ง → กระแทก → ค้าง → ผ่านหัวไป
-  wkAt(WK.p1,()=>{ $('wkPos').classList.add('go'); try{SFX.flip();}catch(e){} });
-  wkAt(WK.p1+WK.impact,()=>{
-    wkImpact(false);
+  // 1) ตัดฉากเข้าป้ายตำแหน่ง
+  const t1=WK.p1;
+  wkCut(t1,()=>{
+    $('wkPos').classList.add('show');
     $('wkSlotL').textContent=current.p||'—'; $('wkSlotL').classList.remove('wait'); $('wkSlotL').classList.add('filled');
+  },()=>{
+    wkImpact(false);
     try{SFX.thump();SFX.blip(760,.14,'triangle',.28);}catch(e){}
   });
-  // เก็บป้ายที่ 1 ให้พ้นจอก่อน ป้ายที่ 2 ถึงจะมา (ให้เห็นทีละอันจริง ๆ)
-  wkAt(WK.p1+WK.panel,()=>$('wkPos').classList.remove('go'));
 
-  // 2) ป้ายแผนก
-  const t2=WK.p1+WK.gap;
-  wkAt(t2,()=>{ $('wkDept').classList.add('go'); try{SFX.flip();}catch(e){} });
-  wkAt(t2+WK.impact,()=>{
-    wkImpact(false);
+  // 2) ตัดฉากจากป้ายตำแหน่ง → ป้ายแผนก (สลับตอนจอมืด จะได้ไม่เห็นป้ายซ้อนกัน)
+  const t2=t1+WK.wipe+WK.hold;
+  wkCut(t2,()=>{
+    $('wkPos').classList.remove('show');
+    $('wkDept').classList.add('show');
     $('wkSlotR').textContent=current.c||'—'; $('wkSlotR').classList.remove('wait'); $('wkSlotR').classList.add('filled');
+  },()=>{
+    wkImpact(false);
     try{SFX.thump();SFX.blip(940,.14,'triangle',.28);}catch(e){}
   });
-  wkAt(t2+WK.panel,()=>$('wkDept').classList.remove('go'));
 
-  // 3) จังหวะมืดเงียบ — หยุดหายใจก่อนเฉลยคน
-  const tHush=t2+WK.panel;
-  wkAt(tHush,()=>w.classList.add('hush'));
-
-  // 4) เงาโผล่จากปลายอุโมงค์แล้วพุ่งเข้าหากล้อง + อุโมงค์เร่งสุด
-  const tWalk=tHush+WK.hush;
-  wkAt(tWalk,()=>{
-    w.classList.remove('hush');
+  // 3) ตัดฉากจากป้ายแผนก → อุโมงค์เปล่า แล้วเงาโผล่พุ่งเข้าหากล้อง (อุโมงค์เร่งสุด)
+  const t3=t2+WK.wipe+WK.hold;
+  const tWalk=t3+WK.wipe*0.5;
+  wkCut(t3,()=>{
+    $('wkDept').classList.remove('show');
     w.classList.add('walk','spd3');
     try{SFX.charge(2.8);}catch(e){}
   });
   wkAt(tWalk+WK.walk*0.45,()=>{ shake=Math.max(shake,.6); });
   wkAt(tWalk+WK.walk*0.8,()=>{ shake=Math.max(shake,1); });
 
-  // 5) วาบขาว แล้วส่งต่อให้การ์ด
+  // 4) วาบขาว แล้วส่งต่อให้การ์ด
   const tBlast=tWalk+WK.walk;
   wkAt(tBlast,()=>{ w.classList.add('blast'); wkImpact(true); try{SFX.burst();}catch(e){} });
   wkAt(tBlast+WK.blast,endWalkout);
