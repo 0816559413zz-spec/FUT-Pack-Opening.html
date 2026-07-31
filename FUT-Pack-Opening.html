@@ -277,6 +277,7 @@
     margin:-12vmin 0 0 -12vmin;border-radius:50%;filter:blur(8px);
     background:radial-gradient(circle,#eaf5ff,hsl(var(--tone),100%,70%) 32%,
       hsla(var(--tone),70%,47%,.28) 62%,transparent 76%);
+    will-change:transform,opacity;
     animation:wkCore 2.1s ease-in-out infinite}
   @keyframes wkCore{0%,100%{transform:scale(.8);opacity:.5}50%{transform:scale(1.2);opacity:.95}}
   #walkout.spd3 #wkCore{animation-duration:.6s}
@@ -287,6 +288,8 @@
       transparent 0deg 1.6deg,hsla(var(--tone),100%,83%,.6) 1.6deg 2deg,transparent 2deg 6deg);
     -webkit-mask-image:radial-gradient(circle at 50% 50%,transparent 10%,#000 40%,transparent 78%);
     mask-image:radial-gradient(circle at 50% 50%,transparent 10%,#000 40%,transparent 78%);
+    /* conic-gradient + mask ขนาดเกือบสองเท่าจอ ถ้าไม่ปักเป็นเลเยอร์แยกจะโดนวาดใหม่ทุกเฟรมที่หมุน */
+    will-change:transform;
     animation:wkSpin 7s linear infinite}
   @keyframes wkSpin{to{transform:rotate(360deg)}}
   #walkout.spd2 #wkStreak{opacity:.4}
@@ -323,11 +326,15 @@
     filter:drop-shadow(0 0 26px rgba(120,180,255,.55))}
   /* ความยาวต้องตรงกับ WK.walk ฝั่ง JS — JS เป็นคนตั้ง --walk ให้ */
   #walkout.walk #wkFigure{animation:wkWalk var(--walk,3s) cubic-bezier(.55,0,.85,.65) forwards}
+  /* เบลอถูกรวบให้จบตั้งแต่ช่วงต้น แล้วค้างที่ 0 ยาวจนจบ — ตั้งแต่ 30% ไป
+     เหลือแค่ transform/opacity ที่การ์ดจอทำได้เอง ไม่ต้องวาดเลเยอร์ใหม่ทุกเฟรม
+     (ของเดิมไล่เบลอกลับขึ้น 4px ตอนท้าย ซึ่งเป็นจังหวะที่เงาตัวใหญ่เต็มจอพอดี = แพงสุด) */
   @keyframes wkWalk{
     0%{transform:translate(-50%,0) translateZ(-2000px);opacity:0;filter:blur(5px)}
     18%{opacity:.5}
-    62%{opacity:1;filter:blur(0)}
-    100%{transform:translate(-50%,0) translateZ(500px);opacity:1;filter:blur(4px)}}
+    30%{filter:blur(0)}
+    62%{opacity:1}
+    100%{transform:translate(-50%,0) translateZ(500px);opacity:1;filter:blur(0)}}
 
   /* ---- วงจรการเดิน : ขาสลับ แขนแกว่งสวนขา ตัวโยก+ถ่ายน้ำหนักซ้ายขวา ---- */
   #wkFigure .wkLimb,#wkFigure .wkBob,#wkFigure .wkSway,#wkFigure .wkShadow{
@@ -405,10 +412,13 @@
   .wkPanel.fromL{--po0:10%;--ry0:9deg}
   .wkPanel.show{display:grid}
   .wkPanel.show .wkShape{animation:wkTurn var(--turn,1.5s) cubic-bezier(.16,.84,.30,1) forwards}
+  /* เบลอจบเร็วขึ้น (38% ของจังหวะ) แล้วค้างที่ 0 ตลอดที่เหลือ
+     แผ่นป้ายกว้างเป็นพันพิกเซล ถ้าปล่อยให้ค่าเบลอขยับยาวจนจบ เบราว์เซอร์ต้องวาดใหม่ทุกเฟรม */
   @keyframes wkTurn{
     0%{transform:translateZ(-520px) rotateX(6deg) rotateZ(-1.2deg)
       rotateY(calc(var(--ry0) + 99deg));opacity:0;filter:blur(9px)}
-    22%{opacity:1;filter:blur(2px)}
+    22%{opacity:1;filter:blur(1.5px)}
+    38%{filter:blur(0)}
     100%{transform:translateZ(-300px) rotateX(6deg) rotateZ(-1.2deg)
       rotateY(var(--ry0));opacity:1;filter:blur(0)}}
   /* กล้องแพนจากข้างจอกลับมาตรงกลาง — ตัวแผ่นไม่มีอนิเมชันแล้ว ค้างท่าเดิมของมันไว้
@@ -1534,6 +1544,8 @@ function sunburstTexture(){
    PART 3 — ฉาก 3D (Three.js) + Bloom post-processing เขียนเอง
    ========================================================================= */
 let renderer,scene,camera,W2=1,H2=1,DPR=1;
+/* ตัวคูณความละเอียดของบัฟเฟอร์ที่ปรับเองอัตโนมัติตอนเครื่องเรนเดอร์ไม่ทัน (ดู perfTick) */
+let renderScale=1;
 let bgMesh,raysMesh,dust,beam,groundGlow;
 let packGroup,packMesh,packGlow,packSparks;
 let cardGroup,cardFront,cardBack,cardHolo,cardGlow;
@@ -1551,8 +1563,10 @@ function makeRT(w,h,type){
 
 function initThree(){
   const host=document.getElementById('gl');
-  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
-  DPR=Math.min(window.devicePixelRatio||1,2);
+  // antialias ไม่มีผลเลย เพราะฉากถูกเรนเดอร์ลง render target แล้วค่อยแปะกลับเป็นควอดเต็มจอ
+  // (เปิดไว้ = จองบัฟเฟอร์ multisample ทิ้งไว้เปล่า ๆ กินแบนด์วิดท์ทุกเฟรม)
+  renderer=new THREE.WebGLRenderer({antialias:false,alpha:false,powerPreference:'high-performance'});
+  DPR=Math.min(window.devicePixelRatio||1,1.75);
   renderer.setPixelRatio(DPR);
   renderer.setClearColor(0x03050c,1);
   renderer.toneMapping=THREE.NoToneMapping;
@@ -1834,12 +1848,14 @@ function initThree(){
 function onResize(){
   const w=window.innerWidth,h=window.innerHeight;
   W2=w;H2=h;
+  const rs=DPR*renderScale;
+  renderer.setPixelRatio(rs);
   renderer.setSize(w,h);
   camera.aspect=w/h;
   // ปรับระยะกล้องให้การ์ดพอดีจอแนวตั้ง
   camera.fov = w/h < 0.8 ? 52 : 42;
   camera.updateProjectionMatrix();
-  const pw=Math.floor(w*DPR),ph=Math.floor(h*DPR);
+  const pw=Math.floor(w*rs),ph=Math.floor(h*rs);
   rtScene.setSize(pw,ph);
   const bw=Math.max(2,pw>>1),bh=Math.max(2,ph>>1);
   rtBright.setSize(bw,bh);rtA.setSize(bw,bh);rtB.setSize(bw,bh);
@@ -2087,6 +2103,7 @@ function emitBurst(colorHex,count,mode,spread){
   pAttr.position.needsUpdate=pAttr.aSize.needsUpdate=pAttr.aAlpha.needsUpdate=pAttr.aColor.needsUpdate=true;
 }
 
+let pFlush=false;
 function updateParticles(dt){
   const pos=pAttr.position.array,alp=pAttr.aAlpha.array;
   let live=false;
@@ -2107,7 +2124,10 @@ function updateParticles(dt){
     alp[i]=pType[i]===1?Math.min(1,k*2.2):k*k;
     if(pLife[i]<=0){alp[i]=0;pos[i*3+1]=999;}
   }
-  pAttr.position.needsUpdate=true;pAttr.aAlpha.needsUpdate=true;
+  // ไม่มีอนุภาคเหลือแล้วก็ไม่ต้องยิงบัฟเฟอร์ 900 ตัวขึ้น GPU ทุกเฟรม
+  // (pFlush = ส่งปิดท้ายอีกเฟรมเดียวหลังตัวสุดท้ายดับ ให้เฟรมสุดท้ายสะอาดจริง)
+  if(live||pFlush){pAttr.position.needsUpdate=true;pAttr.aAlpha.needsUpdate=true;}
+  pFlush=live;
   return live;
 }
 
@@ -2443,6 +2463,25 @@ function hideCardUI(){
 
 /* ---------------------------------------------------------------- loop    */
 let last=performance.now();
+
+/* ---- ปรับความละเอียดให้เองตามแรงเครื่อง -----------------------------------
+   โพสต์โปรเซสหนึ่งเฟรมกินตั้ง 6 พาสเต็มจอ (ฉาก + คัดส่วนสว่าง + เบลอ 4 รอบ + รวมภาพ)
+   จอความละเอียดสูงหรือการ์ดจอไม่แรงเลยตกเฟรมตอนจังหวะแน่น ๆ
+   ตรงนี้เลยวัดเวลาต่อเฟรมเป็นช่วง ๆ แล้วย่อ/ขยายบัฟเฟอร์ให้เอง
+   ภาพนุ่มลงนิดเดียวจนแทบไม่รู้สึก แต่เฟรมเรตนิ่งขึ้นชัดเจน */
+let perfAcc=0,perfN=0,perfCool=0;
+function perfTick(dt){
+  if(perfCool>0){perfCool-=dt;return;}
+  perfAcc+=dt;perfN++;
+  if(perfN<30)return;                       // เก็บตัวอย่างสัก 30 เฟรมค่อยตัดสิน กันวูบเดียวแล้วรีบลดความละเอียด
+  const avg=perfAcc/perfN;perfAcc=0;perfN=0;
+  if(avg>0.0215&&renderScale>0.6){          // ช้ากว่า ~46fps → ย่อลง
+    renderScale=Math.max(0.6,renderScale-0.15);onResize();perfCool=0.8;
+  }else if(avg<0.0142&&renderScale<1){      // เร็วกว่า ~70fps → ค่อย ๆ คืนความคมให้
+    renderScale=Math.min(1,renderScale+0.1);onResize();perfCool=1.5;
+  }
+}
+let wkRenderAcc=0;
 function animate(){
   requestAnimationFrame(animate);
   const now=performance.now();
@@ -2547,6 +2586,17 @@ function animate(){
   camera.lookAt(0,0,0);
   matComp.uniforms.uAberr.value=0.0014+shake*0.006;
 
+  /* ระหว่างฉาก walkout ชั้น DOM ทึบคลุมเต็มจออยู่ ฉาก 3D ข้างหลังมองไม่เห็นสักพิกเซล
+     เรนเดอร์เต็มอัตราไปก็ทิ้งเปล่า แถมไปแย่ง GPU กับอนิเมชัน CSS ที่คนดูเห็นอยู่จริง ๆ
+     หรี่เหลือ ~12fps พอไม่ให้ภาพค้าง — endWalkout สลับเป็น 'reveal' ก่อนแผ่นทึบจางออก
+     เฟรมเต็มจึงกลับมาทันก่อนที่ฉากข้างหลังจะโผล่ให้เห็น */
+  if(state==='walkout'){
+    wkRenderAcc+=dt;
+    if(wkRenderAcc>=0.08){wkRenderAcc=0;renderFrame();}
+    return;
+  }
+  wkRenderAcc=0;
+  perfTick(dt);
   renderFrame();
 }
 
